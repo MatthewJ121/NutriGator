@@ -1,0 +1,45 @@
+
+:root {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Arial, sans-serif;
+
+  --brand-700: #2b67aa;
+  --brand-600: #2f6fb4;
+  --surface: #ffffff;
+  --text-on-brand: #eaf2ff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: #0f0f0f;
+
+  font-family: var(--font-sans);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  min-width: 320px;
+  font-family: var(--font-sans);
+  color: var(--text);
+  background: var(--brand-600);
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+}
