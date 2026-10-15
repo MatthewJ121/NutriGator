@@ -12,20 +12,105 @@ import "./App.css";
 import logo from "./assets/nutrigator-logo.png";
 import ProgressDashboard from "./ProgressDashboard";
 
+// Backend URL and login route.
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+const LOGIN_ENDPOINT = "/auth/login";
+
+// Demo login is available only when running Vite in development.
+const ENABLE_DEMO_LOGIN = import.meta.env.DEV;
+
 function Login({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  // REAL LOGIN: React -> FastAPI -> Better Auth
+  const handleLogin = async (e) => {
     e.preventDefault();
+    setError("");
 
     if (!email.trim() || !password) {
-      alert("Please enter your email and password.");
+      setError("Please enter your email and password.");
       return;
     }
 
-    onLogin(email.trim());
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        `${API_URL}${LOGIN_ENDPOINT}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            email: email.trim(),
+            password: password,
+          }),
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        const message =
+          typeof data.detail === "string"
+            ? data.detail
+            : data.message || "Login failed. Please try again.";
+
+        throw new Error(message);
+      }
+
+      // Expected bearer-token response from FastAPI.
+      const token = data.token;
+
+      if (!token) {
+        throw new Error(
+          "The backend did not return an authentication token."
+        );
+      }
+
+      // Keep the token in React memory, not localStorage.
+      onLogin({
+        email: data.user?.email || email.trim(),
+        user: data.user || null,
+        token: token,
+        isDemo: false,
+      });
+
+      navigate("/app/log", { replace: true });
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to connect to the backend."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // DEMO LOGIN: frontend development only.
+  // Does not call the backend or create a real session.
+  const handleDemoLogin = () => {
+    if (!ENABLE_DEMO_LOGIN) return;
+
+    setError("");
+
+    onLogin({
+      email: "demo@nutrigator.local",
+      user: null,
+      token: null,
+      isDemo: true,
+    });
+
     navigate("/app/log", { replace: true });
   };
 
@@ -66,8 +151,18 @@ function Login({ onLogin }) {
             required
           />
 
-          <button type="submit" className="form-button">
-            Log In
+          {error && (
+            <p role="alert" style={{ color: "#b42318" }}>
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            className="form-button"
+            disabled={loading}
+          >
+            {loading ? "Logging In..." : "Log In"}
           </button>
 
           <button
@@ -79,16 +174,29 @@ function Login({ onLogin }) {
           >
             Create Account
           </button>
+
+          {ENABLE_DEMO_LOGIN && (
+            <button
+              type="button"
+              className="form-button"
+              onClick={handleDemoLogin}
+              disabled={loading}
+            >
+              Demo Login (Frontend Testing)
+            </button>
+          )}
         </form>
       </div>
     </div>
   );
 }
 
-function Home({ onLogout }) {
+function Home({ user, onLogout }) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    // Clears local React state.
+    // Real backend session revocation must be added later.
     onLogout();
     navigate("/", { replace: true });
   };
@@ -128,6 +236,18 @@ function Home({ onLogout }) {
       </header>
 
       <main className="nutrigator-content">
+        {user?.isDemo && (
+          <p
+            style={{
+              textAlign: "center",
+              fontSize: "13px",
+              color: "#555",
+            }}
+          >
+            Demo Mode — Frontend Testing Only
+          </p>
+        )}
+
         <ProgressDashboard />
 
         <section className="nutrigator-food-placeholder">
@@ -146,6 +266,7 @@ function Home({ onLogout }) {
 }
 
 export default function App() {
+  // Stores the authenticated user and token in memory.
   const [user, setUser] = useState(null);
 
   return (
@@ -166,7 +287,10 @@ export default function App() {
           path="/app/log"
           element={
             user ? (
-              <Home onLogout={() => setUser(null)} />
+              <Home
+                user={user}
+                onLogout={() => setUser(null)}
+              />
             ) : (
               <Navigate to="/" replace />
             )
