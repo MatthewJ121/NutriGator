@@ -1,0 +1,277 @@
+
+.tdOuter {
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.tdWidget {
+  background: #eceef2;
+  border: 3px solid #bfc1c5;
+  border-radius: 26px;
+  padding: 16px;
+}
+
+.tdCardsRow {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr 1fr;
+  gap: 12px;
+  align-items: center;
+  min-height: 155px;
+}
+
+.tdMiniCard {
+  background: #ffffff;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  padding: 14px;
+  min-width: 0;
+}
+
+.tdCaloriesCard {
+  min-height: 135px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.tdGoalCard {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.tdHydCard {
+  min-height: 135px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.tdGoalTitle,
+.tdHydTitle {
+  font-size: 16px;
+  font-weight: 900;
+  color: #1b3554;
+  margin-bottom: 6px;
+}
+
+.tdGoalLine,
+.tdHydLine {
+  font-size: 14px;
+  font-weight: 800;
+  color: #1b3554;
+  margin: 3px 0;
+}
+
+.tdHydCheer {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #1b3554;
+  line-height: 1.4;
+}
+
+.tdRing {
+  display: grid;
+  place-items: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.tdRingTrack {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.12);
+}
+
+.tdRingFill {
+  fill: none;
+  stroke: #19a35c;
+  stroke-linecap: round;
+}
+
+.tdRingText {
+  position: absolute;
+  width: 80px;
+  text-align: center;
+  color: #1b3554;
+}
+
+.tdRingTitle {
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.tdRingSub {
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 3px;
+}
+
+.tdDots {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tdDot {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+
+.tdDot.active {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.tdSecondGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  min-height: 155px;
+}
+
+.tdMessageCard,
+.tdCenterRing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.tdSpeechBubble {
+  background: #eaf2ff;
+  color: #1b3554;
+  border-radius: 14px;
+  padding: 16px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.tdCenterRing p {
+  font-size: 12px;
+  font-weight: 800;
+  color: #1b3554;
+  margin: 8px 0 0;
+}
+
+.tdGoalActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.tdEditButton {
+  border: 2px solid #111111;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #1b3554;
+  padding: 9px 15px;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tdEditButton:hover {
+  background: #eaf2ff;
+}
+
+.tdEditForm {
+  margin-top: 12px;
+  padding: 20px;
+  background: #eceef2;
+  border: 2px solid #bfc1c5;
+  border-radius: 18px;
+}
+
+.tdEditForm h3 {
+  margin: 0 0 16px;
+  color: #1b3554;
+}
+
+.tdEditGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.tdEditGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #1b3554;
+}
+
+.tdEditGrid input {
+  width: 100%;
+  height: 42px;
+  border: 2px solid #111111;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 15px;
+}
+
+@media (max-width: 700px) {
+  .tdWidget {
+    padding: 10px;
+    border-radius: 18px;
+  }
+
+  .tdCardsRow {
+    gap: 7px;
+    grid-template-columns: 1fr 1.2fr 1fr;
+  }
+
+  .tdMiniCard {
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  .tdGoalTitle,
+  .tdHydTitle {
+    font-size: 12px;
+  }
+
+  .tdGoalLine,
+  .tdHydLine,
+  .tdHydCheer {
+    font-size: 10px;
+    line-height: 1.3;
+  }
+
+  .tdCaloriesCard,
+  .tdHydCard {
+    min-height: 110px;
+  }
+
+  .tdSecondGrid {
+    gap: 7px;
+  }
+
+  .tdEditGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 420px) {
+  .tdCardsRow,
+  .tdSecondGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .tdEditGrid {
+    grid-template-columns: 1fr;
+  }
+}
