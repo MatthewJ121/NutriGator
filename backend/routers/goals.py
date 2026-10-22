@@ -43,6 +43,12 @@ async def create_goal(target_user_id: uuid.UUID, goal: Goal):
     """
     Create a new nutrition goal for a user.
 
+    No request body is required. Only fields included in the request body will be
+    considered tracked by the user. Note that a value of 0 does not untrack the field.
+    Values of 0 indicate the user intends to intake no amount of that nutrient. 
+    The effective date is today if unspecified.
+    Do not use negative numbers to attempt to untrack a field.
+
     Parameters:  
         target_user_id (UUID): ID of user to create a goal for.  
         goal (Goal): Contains nutrient targets, goal id, and effective date.
@@ -98,6 +104,15 @@ async def update_goal(target_user_id: uuid.UUID, goal: Goal):
     """
     Update a user's existing goal at a specifed effective date.
 
+    All request body fields are optional. Any unspecified values will be interpreted as 
+    being untracked by the user. This means that any value in unspecified fields will
+    be removed. This makes it simple to unselect specific fields, but means any data
+    intended to remain unchanged must be retrieved and included in the request body.
+    Do not use negative numbers to attempt to untrack a field.
+
+    Note that a value of 0 does not untrack the field.
+    Values of 0 indicate the user intends to intake no amount of that nutrient. 
+
     Args:  
         target_user_id: ID of user to modify a goal for.  
         goal (Goal): Contains nutrient targets, goal id, and effective date.
@@ -145,6 +160,9 @@ async def update_goal(target_user_id: uuid.UUID, goal: Goal):
 async def get_goal(target_user_id: uuid.UUID):
     """
     Get all goals belonging to a user ordered by effective date.
+
+    Untracked fields in a goal are denoted by -1 internally. When using retrieved
+    field values, anything holding -1 should be discarded. 
 
     Args:  
         target_user_id: ID of the user whose goals are requested.
