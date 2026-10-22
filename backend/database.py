@@ -25,13 +25,12 @@ class Profiles(Base):
     is_premium: Mapped[bool] = mapped_column(default=False)
     is_active: Mapped[bool] = mapped_column(default=True)
 
-# NOTE: Negative values are used to indicate that the user has not set a goal for that specific metric.
 class Goals(Base):
     __tablename__ = "Goals"
     
     goal_id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
     user_id: Mapped[uuid.UUID] = mapped_column(index=True)
-    effective_date: Mapped[date] = mapped_column(index=True, default=date.today())
+    effective_date: Mapped[date] = mapped_column(index=True, default=date.today()) # YYYY-MM-DD
     calories: Mapped[float] = mapped_column()
     protein: Mapped[float] = mapped_column()
     carbs: Mapped[float] = mapped_column()
