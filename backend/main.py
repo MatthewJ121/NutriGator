@@ -1,15 +1,24 @@
 import httpx
-from fastapi import FastAPI
-from sqlalchemy import engine, create_engine, select, text
-from sqlalchemy.orm import Session
+from fastapi import FastAPI, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
+from routers import goals, profiles, externals
 
-import database
-import uuid
+app = FastAPI()
+app.include_router(goals.router)
+app.include_router(profiles.router)
+app.include_router(externals.router)
 
-print("DATABASE_URL:", database.DATABASE_URL)
-engine = create_engine(database.DATABASE_URL, echo=True)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"
+                   "http://localhost:3000"
+                   "https://MatthewJ121.github.io"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Testing database connections
+# Testing database connections, use as reference for future database queries
 '''
 with Session(engine) as session:
     testProfile = database.Profile(user_id=uuid.uuid4(), first_name="John", is_premium=True)
