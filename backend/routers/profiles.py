@@ -1,4 +1,12 @@
-#TODO: Add FastAPI routes for profile operations (create, info edits, login/logout, etc.)
+"""
+Handles all API requests related to profile management.
+
+URL Prefix:  
+    /api/profile
+
+Endpoints:  
+    TODO
+"""
 
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
@@ -13,7 +21,7 @@ router = APIRouter(
     tags=["Profile"],
 )
 
-'''Request body models'''
+'''Request payload models'''
 
 class NewProfile(BaseModel):
     #NOTE: account info related to BetterAuth and User table 

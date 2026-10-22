@@ -1,5 +1,5 @@
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 import uuid
 import os
 from dotenv import load_dotenv
@@ -30,7 +30,7 @@ class Goals(Base):
     
     goal_id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
     user_id: Mapped[uuid.UUID] = mapped_column(index=True)
-    effective_date: Mapped[date] = mapped_column(index=True, default=date.today()) # YYYY-MM-DD
+    effective_date: Mapped[date] = mapped_column(index=True, server_default=func.current_date()) # YYYY-MM-DD
     calories: Mapped[float] = mapped_column()
     protein: Mapped[float] = mapped_column()
     carbs: Mapped[float] = mapped_column()
