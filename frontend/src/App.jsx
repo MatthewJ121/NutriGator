@@ -11,6 +11,7 @@ import {
 import "./App.css";
 import logo from "./assets/nutrigator-logo.png";
 import ProgressDashboard from "./ProgressDashboard";
+import BackendConnectionTest from "./BackendConnectionTest";
 import { loginUser } from "./api/auth";
 
 const ENABLE_DEMO_LOGIN = import.meta.env.DEV;
@@ -232,15 +233,17 @@ function Home({ user, onLogout }) {
           </p>
         )}
 
-        <ProgressDashboard
-          userId={user?.userId}
-          token={user?.token}
-          isDemo={user?.isDemo}
-        />
+<ProgressDashboard
+  userId={user?.userId}
+  token={user?.token}
+  isDemo={user?.isDemo}
+/>
 
-        <section className="nutrigator-food-placeholder">
-          <h3>Food Log</h3>
-        </section>
+<BackendConnectionTest />
+
+<section className="nutrigator-food-placeholder">
+  <h3>Food Log</h3>
+</section>
       </main>
 
       <nav
