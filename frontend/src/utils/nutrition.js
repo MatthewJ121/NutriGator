@@ -120,3 +120,56 @@ export function parseGoalDraft(draft) {
 
   return { goals };
 }
+
+export function makeEmptyMealDraft() {
+  const draft = { food_name: "" };
+
+  for (const { key } of NUTRIENT_FIELDS) {
+    draft[key] = "";
+  }
+
+  return draft;
+}
+
+export function parseMealDraft(draft) {
+  const name = draft.food_name.trim();
+
+  if (!name) {
+    return { error: "Please enter what you ate." };
+  }
+
+  if (name.length > 200) {
+    return { error: "Food name must be 200 characters or less." };
+  }
+
+  const meal = { food_name: name };
+
+  for (const { key, label } of NUTRIENT_FIELDS) {
+    const text = String(draft[key] ?? "").trim();
+
+    if (text === "") {
+      meal[key] = 0;
+      continue;
+    }
+
+    if (!NUMBER_PATTERN.test(text)) {
+      return { error: `${label} must be a number that is 0 or more.` };
+    }
+
+    meal[key] = Number(text);
+  }
+
+  return { meal };
+}
+
+export function addUpMeals(meals) {
+  const totals = makeZeroTotals();
+
+  for (const meal of meals) {
+    for (const { key } of NUTRIENT_FIELDS) {
+      totals[key] += Number(meal[key]) || 0;
+    }
+  }
+
+  return totals;
+}

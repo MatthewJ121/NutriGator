@@ -2,6 +2,8 @@ import { useState } from "react";
 import "../App.css";
 import logo from "../assets/nutrigator-logo.png";
 import GoalsDashboard from "./GoalsDashboard";
+import FoodLog from "./FoodLog";
+import { addUpMeals } from "../utils/nutrition";
 import SignUp from "./SignUp";
 import { loginUser } from "../api/auth";
 import { getLocalUserId } from "../utils/userId";
@@ -143,6 +145,8 @@ function Login({ onLogin, onCreateAccount }) {
 }
 
 function Home({ user, onLogout }) {
+  const [meals, setMeals] = useState([]);
+
   return (
     <div className="nutrigator-shell">
       <header className="nutrigator-header">
@@ -194,11 +198,14 @@ function Home({ user, onLogout }) {
         <GoalsDashboard
           userId={user.userId}
           isDemo={user.isDemo}
+          totals={addUpMeals(meals)}
         />
 
-        <section className="nutrigator-food-placeholder">
-          <h3>Food Log</h3>
-        </section>
+        <FoodLog
+          userId={user.userId}
+          isDemo={user.isDemo}
+          onMealsChange={setMeals}
+        />
       </main>
 
       <nav

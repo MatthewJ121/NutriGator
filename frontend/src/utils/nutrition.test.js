@@ -1,7 +1,10 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  addUpMeals,
   makeDraftGoals,
+  makeEmptyMealDraft,
+  parseMealDraft,
   makeGoalRequests,
   parseGoalDraft,
   pickCurrentGoals,
@@ -85,5 +88,57 @@ describe("talking to the goals backend", () => {
 
   test("no saved goals means nothing is tracked", () => {
     assert.deepEqual(pickCurrentGoals([], "2026-10-24").goals, {});
+  });
+});
+
+describe("meal form", () => {
+  test("builds a meal with all nutrients and no extra fields", () => {
+    const draft = {
+      ...makeEmptyMealDraft(),
+      food_name: "  Apple ",
+      calories: "95",
+      carbs: "25.1",
+    };
+
+    const { meal } = parseMealDraft(draft);
+
+    assert.deepEqual(meal, {
+      food_name: "Apple",
+      calories: 95,
+      protein: 0,
+      carbs: 25.1,
+      cholesterol: 0,
+      trans_fats: 0,
+      saturated_fats: 0,
+      total_fats: 0,
+    });
+  });
+
+  test("only sends the real nutrient categories", () => {
+    const draft = { ...makeEmptyMealDraft(), food_name: "Apple", sugar: "19" };
+
+    assert.equal(parseMealDraft(draft).meal.sugar, undefined);
+  });
+
+  test("requires a food name", () => {
+    assert.ok(parseMealDraft(makeEmptyMealDraft()).error);
+  });
+
+  test("rejects negative or non-number nutrients", () => {
+    const draft = { ...makeEmptyMealDraft(), food_name: "Apple" };
+
+    assert.ok(parseMealDraft({ ...draft, calories: "-1" }).error);
+    assert.ok(parseMealDraft({ ...draft, calories: "lots" }).error);
+  });
+
+  test("adds up meals for the dashboard", () => {
+    const totals = addUpMeals([
+      { calories: 100, protein: 10 },
+      { calories: 250.5, protein: 5 },
+    ]);
+
+    assert.equal(totals.calories, 350.5);
+    assert.equal(totals.protein, 15);
+    assert.equal(totals.carbs, 0);
   });
 });
