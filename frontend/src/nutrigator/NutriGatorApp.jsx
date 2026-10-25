@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "../App.css";
 import logo from "../assets/nutrigator-logo.png";
-import ProgressDashboard from "../ProgressDashboard";
+import GoalsDashboard from "./GoalsDashboard";
 import SignUp from "./SignUp";
 import { loginUser } from "../api/auth";
 import { getLocalUserId } from "../utils/userId";
@@ -191,9 +191,8 @@ function Home({ user, onLogout }) {
           </p>
         )}
 
-        <ProgressDashboard
+        <GoalsDashboard
           userId={user.userId}
-          token={user.token}
           isDemo={user.isDemo}
         />
 
