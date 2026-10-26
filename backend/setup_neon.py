@@ -7,7 +7,7 @@ database.engine.echo = False
 
 def main():
     if not database.DATABASE_URL:
-        print("DATABASE_URL is missing. Copy env.backend.example to .env.backend and fill it in.")
+        print("DATABASE_URL is missing. Create backend/.env.backend with DATABASE_URL and BASE_AUTH_URL.")
         return
 
     before = set(inspect(database.engine).get_table_names())
