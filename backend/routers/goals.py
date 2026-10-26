@@ -14,7 +14,7 @@ Endpoints:
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 import uuid
 from datetime import date
 import database
@@ -26,6 +26,8 @@ router = APIRouter(
 
 # Define request payload model
 class Goal(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     effective_date: date | None = Field(default_factory=date.today)
     calories: float = Field(default=-1, ge=0)
     protein: float = Field(default=-1, ge=0)
