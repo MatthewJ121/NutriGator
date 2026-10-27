@@ -17,6 +17,7 @@ const API_URL =
   import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const LOGIN_ENDPOINT = "/auth/login";
+const LOGOUT_ENDPOINT = "/auth/logout";
 
 // Demo login is available only when running Vite in development.
 const ENABLE_DEMO_LOGIN = import.meta.env.DEV;
@@ -194,11 +195,31 @@ function Login({ onLogin }) {
 function Home({ user, onLogout }) {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    // Clears local React state.
-    // Real backend session revocation must be added later.
+  const handleLogout = async () => {
     onLogout();
     navigate("/", { replace: true });
+
+    try {
+      const response = await fetch(`${API_URL}${LOGOUT_ENDPOINT}`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(
+          typeof data.detail === "string"
+            ? data.detail
+            : "The server could not confirm logout."
+        );
+      }
+    } catch (error) {
+      alert(
+        error instanceof Error
+          ? `Your local session was cleared, but server logout may have failed: ${error.message}`
+          : "Your local session was cleared, but server logout may have failed."
+      );
+    }
   };
 
   return (
