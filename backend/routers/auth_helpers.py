@@ -49,7 +49,10 @@ async def auth_request(method: str, route: str, *, payload=None, cookies=None):
         if result.status_code in (400, 401, 403, 409, 422):
             message = data.get("message", "Authentication failed") if isinstance(data, dict) else "Authentication failed"
             raise HTTPException(result.status_code, message)
-        raise HTTPException(502, "Authentication service returned an error")
+        raise HTTPException(
+            502,
+            f"Authentication service returned HTTP {result.status_code} for {route}",
+        )
     return result, data
 
 

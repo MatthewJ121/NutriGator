@@ -1,6 +1,7 @@
 """Profile creation and account authentication routes."""
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr, Field
+from starlette.responses import JSONResponse
 
 import database
 from routers.auth_helpers import DB, auth_request, copy_session_cookie, local_user_id
@@ -51,12 +52,37 @@ async def register(body: RegisterRequest, response: Response, db: DB):
 
 @router.post("/auth/login")
 async def login(body: LoginRequest, response: Response):
-    # This route was already tested with Neon; Matthew owns logout.
     upstream, data = await auth_request("POST", "sign-in/email", payload={
         "email": str(body.email), "password": body.password,
     })
     copy_session_cookie(upstream, response)
     return {"user": data.get("user"), "token": data.get("token")}
+
+
+@router.post("/auth/logout")
+async def logout(request: Request, response: Response):
+    try:
+        upstream, _ = await auth_request(
+            "POST", "sign-out", payload={}, cookies=request.cookies,
+        )
+    except HTTPException as exc:
+        failed_response = JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+        )
+        for cookie_name in request.cookies:
+            if cookie_name.endswith("better-auth.session_token"):
+                failed_response.delete_cookie(
+                    cookie_name,
+                    path="/",
+                    secure=cookie_name.startswith("__Secure-"),
+                    httponly=True,
+                    samesite="lax",
+                )
+        return failed_response
+
+    copy_session_cookie(upstream, response)
+    return {"message": "Logged out"}
 
 
 # Other profile operations are still handled by Matthew's assigned work.
