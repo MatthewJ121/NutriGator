@@ -6,3 +6,5 @@ psycopg[binary]
 uv
 python-dotenv
 httpx
+email-validator
+pytest

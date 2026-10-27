@@ -178,9 +178,31 @@ function Login({ onLogin }) {
 function Home({ user, onLogout }) {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     onLogout();
     navigate("/", { replace: true });
+
+    try {
+      const response = await fetch(`${API_URL}${LOGOUT_ENDPOINT}`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(
+          typeof data.detail === "string"
+            ? data.detail
+            : "The server could not confirm logout."
+        );
+      }
+    } catch (error) {
+      alert(
+        error instanceof Error
+          ? `Your local session was cleared, but server logout may have failed: ${error.message}`
+          : "Your local session was cleared, but server logout may have failed."
+      );
+    }
   };
 
   return (
