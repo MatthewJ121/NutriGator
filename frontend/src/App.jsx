@@ -11,15 +11,9 @@ import {
 import "./App.css";
 import logo from "./assets/nutrigator-logo.png";
 import ProgressDashboard from "./ProgressDashboard";
+import BackendConnectionTest from "./BackendConnectionTest";
+import { loginUser } from "./api/auth";
 
-// Backend URL and login route.
-const API_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:8000";
-
-const LOGIN_ENDPOINT = "/auth/login";
-const LOGOUT_ENDPOINT = "/auth/logout";
-
-// Demo login is available only when running Vite in development.
 const ENABLE_DEMO_LOGIN = import.meta.env.DEV;
 
 function Login({ onLogin }) {
@@ -30,9 +24,8 @@ function Login({ onLogin }) {
 
   const navigate = useNavigate();
 
-  // REAL LOGIN: React -> FastAPI -> Better Auth
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  const handleLogin = async (event) => {
+    event.preventDefault();
     setError("");
 
     if (!email.trim() || !password) {
@@ -43,46 +36,27 @@ function Login({ onLogin }) {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `${API_URL}${LOGIN_ENDPOINT}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            email: email.trim(),
-            password: password,
-          }),
-        }
+      const data = await loginUser(
+        email.trim(),
+        password
       );
 
-      const data = await response.json().catch(() => ({}));
+      const token = data.token ?? data.access_token ?? null;
+      const account = data.user ?? null;
+      const userId =
+        account?.user_id ?? account?.id ?? null;
 
-      if (!response.ok) {
-        const message =
-          typeof data.detail === "string"
-            ? data.detail
-            : data.message || "Login failed. Please try again.";
-
-        throw new Error(message);
-      }
-
-      // Expected bearer-token response from FastAPI.
-      const token = data.token;
-
-      if (!token) {
+      if (!token && !account) {
         throw new Error(
-          "The backend did not return an authentication token."
+          "Login succeeded, but the backend did not return user information."
         );
       }
 
-      // Keep the token in React memory, not localStorage.
       onLogin({
-        email: data.user?.email || email.trim(),
-        user: data.user || null,
-        token: token,
+        email: account?.email || email.trim(),
+        user: account,
+        userId,
+        token,
         isDemo: false,
       });
 
@@ -91,15 +65,13 @@ function Login({ onLogin }) {
       setError(
         err instanceof Error
           ? err.message
-          : "Unable to connect to the backend."
+          : "Unable to log in."
       );
     } finally {
       setLoading(false);
     }
   };
 
-  // DEMO LOGIN: frontend development only.
-  // Does not call the backend or create a real session.
   const handleDemoLogin = () => {
     if (!ENABLE_DEMO_LOGIN) return;
 
@@ -108,6 +80,7 @@ function Login({ onLogin }) {
     onLogin({
       email: "demo@nutrigator.local",
       user: null,
+      userId: null,
       token: null,
       isDemo: true,
     });
@@ -127,7 +100,10 @@ function Login({ onLogin }) {
           <h1>NutriGator</h1>
         </div>
 
-        <form className="login-card" onSubmit={handleLogin}>
+        <form
+          className="login-card"
+          onSubmit={handleLogin}
+        >
           <h2>Login</h2>
 
           <label htmlFor="email">Email</label>
@@ -136,7 +112,9 @@ function Login({ onLogin }) {
             type="email"
             placeholder="you@clinic.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(event) =>
+              setEmail(event.target.value)
+            }
             autoComplete="email"
             required
           />
@@ -147,13 +125,18 @@ function Login({ onLogin }) {
             type="password"
             placeholder="••••••••"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(event) =>
+              setPassword(event.target.value)
+            }
             autoComplete="current-password"
             required
           />
 
           {error && (
-            <p role="alert" style={{ color: "#b42318" }}>
+            <p
+              role="alert"
+              style={{ color: "#b42318" }}
+            >
               {error}
             </p>
           )}
@@ -232,7 +215,10 @@ function Home({ user, onLogout }) {
             alert("Account page coming soon!")
           }
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
             <path
               d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2c-4.8 0-8 2.4-8 5v1h16v-1c0-2.6-3.2-5-8-5Z"
               fill="currentColor"
@@ -269,11 +255,17 @@ function Home({ user, onLogout }) {
           </p>
         )}
 
-        <ProgressDashboard />
+<ProgressDashboard
+  userId={user?.userId}
+  token={user?.token}
+  isDemo={user?.isDemo}
+/>
 
-        <section className="nutrigator-food-placeholder">
-          <h3>Food Log</h3>
-        </section>
+<BackendConnectionTest />
+
+<section className="nutrigator-food-placeholder">
+  <h3>Food Log</h3>
+</section>
       </main>
 
       <nav
@@ -287,7 +279,6 @@ function Home({ user, onLogout }) {
 }
 
 export default function App() {
-  // Stores the authenticated user and token in memory.
   const [user, setUser] = useState(null);
 
   return (
