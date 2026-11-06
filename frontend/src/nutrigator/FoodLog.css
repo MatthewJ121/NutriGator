@@ -1,0 +1,165 @@
+
+.foodLog {
+  max-width: 920px;
+  min-height: 220px;
+  margin: 38px auto 0;
+  padding: 18px;
+  border: 2px solid #111111;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.foodLogHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.foodLogHeader h3 {
+  margin: 0;
+  color: #1b3554;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.foodLogForm {
+  margin-top: 14px;
+  padding: 16px;
+  background: #eceef2;
+  border: 2px solid #bfc1c5;
+  border-radius: 14px;
+}
+
+.foodLogTopRow {
+  display: grid;
+  grid-template-columns: 1fr 160px;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.foodLogGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.foodLogForm label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #1b3554;
+}
+
+.foodLogForm input {
+  width: 100%;
+  height: 40px;
+  border: 2px solid #111111;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 15px;
+  font-family: inherit;
+  background: #ffffff;
+}
+
+.foodLogEmpty {
+  color: #4a5d75;
+  font-weight: 700;
+}
+
+.foodLogList {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.foodLogList li {
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.foodLogName {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-weight: 900;
+  color: #1b3554;
+}
+
+.foodLogTime {
+  font-weight: 700;
+  color: #4a5d75;
+  font-size: 13px;
+}
+
+.foodLogNumbers {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #4a5d75;
+}
+
+@media (max-width: 700px) {
+  .foodLog {
+    margin-top: 24px;
+  }
+
+  .foodLogGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 420px) {
+  .foodLogTopRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.flButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.flButton {
+  border: 2px solid #111111;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #1b3554;
+  padding: 9px 15px;
+  font-size: 14px;
+  font-weight: 900;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.flButton:hover {
+  background: #eaf2ff;
+}
+
+.flPrimary {
+  background: #2b67aa;
+  color: #ffffff;
+}
+
+.flPrimary:hover {
+  background: #23558d;
+}
+
+.foodLogForm .foodLogFoodField {
+  margin-bottom: 4px;
+}
+
+.foodLogHint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #4a5d75;
+}
