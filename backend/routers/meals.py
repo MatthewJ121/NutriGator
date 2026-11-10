@@ -77,6 +77,25 @@ def todays_meals(user_id: UserId, db: DB):
     ).all()
     return [meal_data(meal) for meal in meals]
 
+@router.delete("/meals/{target_meal_id}", status_code=501) #TODO change status to 204 when implemented
+def delete_meal(target_meal_id: int, user_id: UserId, db: DB):
+    """
+    Delete a nutrition goal for a user. No request body is required.
+
+    Parameters:  
+        target_meal_id (int): ID of the meal to delete.  
+
+    Returns:  
+        None.
+
+    Raises:  
+        HTTPException(401): Invalid session.  
+        HTTPException(403): Logged-in user does not own this meal.  
+        HTTPException(404): The meal does not exist.  
+        HTTPException(500): The database delete failed.
+    """
+pass
+
 
 @router.get("/progress/today")
 def today_progress(user_id: UserId, db: DB):
@@ -124,3 +143,22 @@ def today_progress(user_id: UserId, db: DB):
         }
 
     return {"date": start.date().isoformat(), "timezone": "UTC", "nutrients": progress}
+
+@router.get("/history", status_code=501)
+def meal_history(user_id: UserId, db: DB):
+    """
+    Retrieve the entire meal history for a user. No request body is accepted.
+
+    Parameters:  
+        None.
+
+    Returns:  
+        dict: List of all meal info keyed by consumption date.
+        message: Details the length of the returned dictionary and success message.
+
+    Raises:  
+        HTTPException(401): Invalid session or user.     
+        HTTPException(403): Inactive user.
+        HTTPException(500): The database read failed.
+"""
+pass

@@ -5,6 +5,7 @@ URL Prefix:
     /api/goals
 
 Endpoints:  
+    #TODO update docstring when implmenting #44
     POST /{user_id} - Create a new goal for a specific user and date.  
     PUT /{user_id} - Update an existing goal for a specific user and date.  
     GET /{user_id} - Retrieve all goals associated with a user, sorted chronologically.  
