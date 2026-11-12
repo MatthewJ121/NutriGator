@@ -4,7 +4,7 @@ from pydantic import BaseModel, EmailStr, Field
 from starlette.responses import JSONResponse
 
 import database
-from routers.auth_helpers import DB, auth_request, copy_session_cookie, local_user_id
+from routers.auth_helpers import DB, auth_request, copy_session_cookie, local_user_id, upstream_cookies, clear_session_cookies
 
 router = APIRouter(tags=["Profiles"])
 
@@ -22,7 +22,7 @@ class LoginRequest(BaseModel):
 
 @router.post("/auth/register", status_code=201)
 @router.post("/api/profile/new", status_code=201, include_in_schema=False)
-async def register(body: RegisterRequest, response: Response, db: DB):
+async def register(body: RegisterRequest, response: Response, request: Request, db: DB):
     name = body.name.strip()
     if not name:
         raise HTTPException(422, "Name cannot be blank")
@@ -44,18 +44,18 @@ async def register(body: RegisterRequest, response: Response, db: DB):
         ))
         db.commit()
 
-    copy_session_cookie(upstream, response)
+    copy_session_cookie(upstream, response, request)
     return {"message": "Account created", "user": {
         "id": str(auth_id), "email": str(body.email), "name": name,
     }}
 
 
 @router.post("/auth/login")
-async def login(body: LoginRequest, response: Response):
+async def login(body: LoginRequest, response: Response, request: Request):
     upstream, data = await auth_request("POST", "sign-in/email", payload={
         "email": str(body.email), "password": body.password,
     })
-    copy_session_cookie(upstream, response)
+    copy_session_cookie(upstream, response, request)
     return {"user": data.get("user"), "token": data.get("token")}
 
 
@@ -63,25 +63,18 @@ async def login(body: LoginRequest, response: Response):
 async def logout(request: Request, response: Response):
     try:
         upstream, _ = await auth_request(
-            "POST", "sign-out", payload={}, cookies=request.cookies,
+            "POST", "sign-out", payload={}, cookies=upstream_cookies(request.cookies),
         )
     except HTTPException as exc:
         failed_response = JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.detail},
         )
-        for cookie_name in request.cookies:
-            if cookie_name.endswith("better-auth.session_token"):
-                failed_response.delete_cookie(
-                    cookie_name,
-                    path="/",
-                    secure=cookie_name.startswith("__Secure-"),
-                    httponly=True,
-                    samesite="lax",
-                )
+        clear_session_cookies(request, failed_response)
         return failed_response
 
-    copy_session_cookie(upstream, response)
+    copy_session_cookie(upstream, response, request)
+    clear_session_cookies(request, response)
     return {"message": "Logged out"}
 
 

@@ -14,6 +14,7 @@ function goalsEndpoint(userId) {
 async function requestGoal(method, userId, goals) {
   const options = {
     method,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },

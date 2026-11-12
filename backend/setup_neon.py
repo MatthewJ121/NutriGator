@@ -23,6 +23,11 @@ def main():
             connection.execute(text('ALTER TABLE "Meals" ADD COLUMN consumed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()'))
         print('Added consumed_at column to "Meals"')
 
+    if "meal_type" not in meal_columns:
+        with database.engine.begin() as connection:
+            connection.execute(text('ALTER TABLE "Meals" ADD COLUMN IF NOT EXISTS meal_type VARCHAR'))
+        print('Added meal_type column to "Meals"')
+
     for table in database.Base.metadata.sorted_tables:
         existing = {column["name"] for column in inspect(database.engine).get_columns(table.name)}
         missing = [column.name for column in table.columns if column.name not in existing]
