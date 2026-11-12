@@ -41,7 +41,7 @@ export function loginUser(email, password) {
 }
 
 export function signupUser(name, email, password) {
-  return authRequest("/auth/signup", {
+  return authRequest("/auth/register", {
     name,
     email,
     password,

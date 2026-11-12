@@ -30,6 +30,7 @@ export default function GoalsEditor({
   isDemo = false,
   goals,
   onSaved,
+  onUnauthorized,
   onCancel,
 }) {
   const [draftGoals, setDraftGoals] = useState(
@@ -85,6 +86,7 @@ export default function GoalsEditor({
 
       onSaved(result.goals, "Nutrition goals saved!");
     } catch (err) {
+      if (err.status === 401) { onUnauthorized?.(); return; }
       setError(
         err instanceof Error
           ? err.message
