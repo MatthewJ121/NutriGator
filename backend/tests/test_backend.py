@@ -201,3 +201,147 @@ def test_missing_session_is_rejected(monkeypatch):
     with TestClient(main.app) as client:
         response = client.get("/meals/today")
     assert response.status_code == 401
+
+
+def test_meal_edit_untrack_delete_and_day_boundaries(api_client):
+    client, _ = api_client
+    payload = {"food_name": "Toast", "consumed_at": "2026-11-10T23:30:00-05:00", "protein": 0, "calories": 120.5}
+    saved = client.post("/api/meals", json=payload)
+    assert saved.status_code == 200, saved.text
+    meal = saved.json()
+    assert meal["protein"] == 0 and meal["carbs"] == -1
+    url = "/api/meals/2026-11-10?timezone_offset=300"
+    assert len(client.get(url).json()) == 1
+    assert client.get("/api/meals/2026-11-11?timezone_offset=300").status_code == 204
+    edited = client.post("/api/meals", json={"meal_id": meal["meal_id"], "food_name": "New toast", "consumed_at": "2026-11-09T12:00:00Z", "protein": 0})
+    assert edited.status_code == 200, edited.text
+    assert edited.json()["calories"] == -1
+    assert client.get(url).status_code == 204
+    assert client.get("/api/meals/2026-11-09").json()[0]["food_name"] == "New toast"
+    assert client.request("DELETE", "/api/meals", json={"meal_id": meal["meal_id"]}).status_code == 204
+    assert client.get("/api/meals/2026-11-09").status_code == 204
+
+
+def test_new_meal_api_validates_and_checks_ownership(api_client):
+    client, sessions = api_client
+    payload = {"food_name": "Toast", "consumed_at": "2026-11-10T12:00:00Z"}
+    for change in ({"calories": -1}, {"calories": "abc"}, {"sugar": 1}, {"food_name": "  "}, {"consumed_at": "2026-11-10T12:00:00"}):
+        assert client.post("/api/meals", json={**payload, **change}).status_code == 422
+    with sessions() as db:
+        meal = database.Meals(user_id=uuid.uuid4(), consumed_at=datetime.now(timezone.utc), **sample_meal())
+        db.add(meal)
+        db.commit()
+        meal_id = meal.meal_id
+    assert client.post("/api/meals", json={**payload, "meal_id": meal_id}).status_code == 404
+    assert client.request("DELETE", "/api/meals", json={"meal_id": meal_id}).status_code == 403
+
+
+def test_day_listing_is_sorted_and_handles_dst(api_client):
+    client, _ = api_client
+    for when in ["2026-11-01T23:30:00-05:00", "2026-11-01T00:30:00-04:00", "2026-11-02T00:00:00-05:00"]:
+        assert client.post("/api/meals", json={"food_name": "Toast", "consumed_at": when}).status_code == 200
+    rows = client.get("/api/meals/2026-11-01?timezone_offset=240&timezone_end_offset=300").json()
+    assert len(rows) == 2
+    assert rows[0]["consumed_at"] < rows[1]["consumed_at"]
+
+
+def test_delete_by_id_permissions_and_inactive_account(api_client):
+    client, sessions = api_client
+    own = client.post("/api/meals", json={"food_name": "Toast", "consumed_at": "2026-11-10T12:00:00Z"}).json()["meal_id"]
+    with sessions() as db:
+        other = database.Meals(user_id=uuid.uuid4(), consumed_at=datetime.now(timezone.utc), **sample_meal())
+        db.add(other)
+        db.commit()
+        other_id = other.meal_id
+    response = client.delete(f"/api/meals/{other_id}")
+    assert response.status_code == 403
+    assert "food_name" not in response.json()
+    assert client.delete("/api/meals/999999").status_code == 404
+    with sessions() as db:
+        db.get(database.Profiles, TEST_USER).is_active = False
+        db.commit()
+    assert client.delete(f"/api/meals/{own}").status_code == 403
+    with sessions() as db:
+        assert db.get(database.Meals, own) is not None
+        db.get(database.Profiles, TEST_USER).is_active = True
+        db.commit()
+    assert client.delete(f"/api/meals/{own}").status_code == 204
+    with sessions() as db:
+        assert db.get(database.Meals, own) is None
+        assert db.get(database.Meals, other_id) is not None
+
+
+def test_delete_rejects_inactive_session(api_client, monkeypatch):
+    client, _ = api_client
+    main.app.dependency_overrides.pop(auth_helpers.current_user)
+    async def expired_session(*args, **kwargs):
+        return Mock(), {"user": None, "session": None}
+    monkeypatch.setattr(auth_helpers, "auth_request", expired_session)
+    client.cookies.set("session", "expired")
+    assert client.delete("/api/meals/1").status_code == 401
+
+
+def test_delete_database_failure_rolls_back(api_client, monkeypatch):
+    from sqlalchemy.exc import SQLAlchemyError
+    from sqlalchemy.orm import Session
+    client, sessions = api_client
+    meal_id = client.post("/api/meals", json={"food_name": "Toast", "consumed_at": "2026-11-10T12:00:00Z"}).json()["meal_id"]
+    def failed_commit(self):
+        raise SQLAlchemyError("Database failure")
+    monkeypatch.setattr(Session, "commit", failed_commit)
+    response = client.delete(f"/api/meals/{meal_id}")
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Unable to delete meal"}
+    with sessions() as db:
+        assert db.get(database.Meals, meal_id) is not None
+
+
+def test_history_contract_empty_invalid_inactive_and_progress(api_client):
+    client, sessions = api_client
+    for prefix in ("/api/meals", "/api/progress"):
+        assert client.get(f"{prefix}/not-a-date").status_code == 422
+        assert client.get(f"{prefix}/2026-02-30").status_code == 422
+        empty = client.get(f"{prefix}/2026-11-01")
+        assert empty.status_code == 204 and empty.content == b""
+        assert empty.headers["x-detail"] == "No data on 2026-11-01"
+    with sessions() as db:
+        db.add(sample_goal(effective_date=datetime(2026, 10, 1).date(), calories=200))
+        db.add(sample_goal(effective_date=datetime(2026, 12, 1).date(), calories=999))
+        db.commit()
+    for when, calories in [("2026-11-01T12:00:00Z", 50), ("2026-11-02T12:00:00Z", 90)]:
+        client.post("/api/meals", json={"food_name": "Meal", "consumed_at": when, "calories": calories})
+    response = client.get("/api/progress/2026-11-01")
+    assert response.status_code == 200
+    progress = response.json()
+    assert progress["date"] == "2026-11-01"
+    assert progress["nutrients"]["calories"]["consumed"] == 50
+    assert progress["nutrients"]["calories"]["goal"] == 200
+    assert progress["nutrients"]["protein"]["consumed"] == 0
+    with sessions() as db:
+        db.get(database.Profiles, TEST_USER).is_active = False
+        db.commit()
+    for path in ("/api/meals/2026-11-01", "/api/progress/2026-11-01"):
+        assert client.get(path).status_code == 403
+
+
+def test_all_meal_history_endpoints_require_session(api_client):
+    client, _ = api_client
+    main.app.dependency_overrides.pop(auth_helpers.current_user)
+    assert client.get("/api/meals/2026-11-01").status_code == 401
+    assert client.get("/api/progress/2026-11-01").status_code == 401
+    assert client.post("/api/meals", json={"food_name": "Test", "consumed_at": "2026-11-01T12:00:00Z"}).status_code == 401
+    assert client.delete("/api/meals/1").status_code == 401
+
+
+def test_meal_section_is_independent_of_timestamp_and_survives_edits(api_client):
+    client, _ = api_client
+    body = {"food_name": "Late breakfast", "meal_type": "breakfast", "consumed_at": "2026-11-12T14:37:00-05:00", "calories": 100}
+    saved = client.post("/api/meals", json=body).json()
+    assert saved["consumed_at"] == "2026-11-12T19:37:00+00:00"
+    assert saved["meal_type"] == "breakfast"
+    rows = client.get("/api/meals/2026-11-12?timezone_offset=300").json()
+    assert rows[0]["meal_type"] == "breakfast"
+    edited = client.post("/api/meals", json={"meal_id": saved["meal_id"], "food_name": "Edited breakfast", "consumed_at": "2026-11-12T15:09:00-05:00"}).json()
+    assert edited["meal_type"] == "breakfast"
+    assert edited["consumed_at"] == "2026-11-12T20:09:00+00:00"
+    assert client.post("/api/meals", json={**body, "meal_type": "custom"}).status_code == 422

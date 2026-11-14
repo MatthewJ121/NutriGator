@@ -12,7 +12,7 @@ export const DEMO_GOALS = {
   total_fats: { target: 90 },
 };
 
-export default function useNutritionGoals(userId, isDemo = false) {
+export default function useNutritionGoals(userId, isDemo = false, onUnauthorized) {
   const [goals, setGoals] = useState(isDemo ? DEMO_GOALS : {});
   const [loadError, setLoadError] = useState("");
 
@@ -32,8 +32,11 @@ export default function useNutritionGoals(userId, isDemo = false) {
     //     const { goals: savedGoals } = pickCurrentGoals(goalResult.data.goals, typeRows);
     //     setGoals(savedGoals);
     //   })
-      .catch((err) => setLoadError(err.message));
-  }, [userId, isDemo]);
+      .catch((err) => {
+        if (err.status === 401) onUnauthorized?.();
+        else setLoadError(err.message);
+      });
+  }, [userId, isDemo, onUnauthorized]);
 
   return { goals, setGoals, loadError };
 }
