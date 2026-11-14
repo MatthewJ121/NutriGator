@@ -168,7 +168,7 @@ def test_registration_saves_profile_without_password(api_client, monkeypatch):
         return Mock(headers=httpx.Headers()), {"user": {"id": "new-auth-user"}}
 
     monkeypatch.setattr(profiles, "auth_request", fake_auth)
-    response = client.post("/auth/register", json={
+    response = client.post("/api/profiles/auth/register", json={
         "name": "Taylor Gator", "email": "taylor@example.com",
         "password": "new-test-password",
     })
@@ -186,7 +186,7 @@ def test_bad_registration_never_calls_auth(api_client, monkeypatch):
         pytest.fail("Invalid registration should not reach Better Auth")
 
     monkeypatch.setattr(profiles, "auth_request", should_not_call)
-    response = client.post("/auth/register", json={
+    response = client.post("/api/profiles/auth/register", json={
         "name": "Test", "email": "not-an-email", "password": "123",
     })
     assert response.status_code == 422

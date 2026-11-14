@@ -1,4 +1,13 @@
-"""Gemini recommendations and follow-up chat for premium users."""
+"""
+Handles all Gemini recommendations and follow-up chat for premium users.
+
+URL Prefix:  
+    /api
+
+Endpoints:  
+    GET /recommend - Receive AI recommendation based on a user's history.
+    POST /chat - Send user prompts to the AI and receive the generated response. 
+"""
 import os
 from datetime import date
 

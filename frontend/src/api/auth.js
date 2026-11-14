@@ -1,12 +1,13 @@
 
 const API_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:8000";
+  (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "");
+const AUTH_URL = `${API_URL}/api/profiles/auth`;
 
 async function authRequest(path, body) {
   let response;
 
   try {
-    response = await fetch(`${API_URL}${path}`, {
+    response = await fetch(`${AUTH_URL}${path}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -34,16 +35,20 @@ async function authRequest(path, body) {
 }
 
 export function loginUser(email, password) {
-  return authRequest("/auth/login", {
+  return authRequest("/login", {
     email,
     password,
   });
 }
 
 export function signupUser(name, email, password) {
-  return authRequest("/auth/register", {
+  return authRequest("/register", {
     name,
     email,
     password,
   });
+}
+
+export function logoutUser() {
+  return authRequest("/logout", {});
 }

@@ -5,7 +5,7 @@ import GoalsDashboard from "./GoalsDashboard";
 import FoodLog from "./FoodLog";
 import { addUpMeals } from "../utils/nutrition";
 import SignUp from "./SignUp";
-import { loginUser } from "../api/auth";
+import { loginUser, logoutUser } from "../api/auth";
 import { getLocalUserId } from "../utils/userId";
 
 
@@ -190,14 +190,26 @@ export default function NutriGatorApp() {
   const [user, setUser] = useState(null);
   const [screen, setScreen] = useState("login");
 
+  const handleLogout = async () => {
+    setUser(null);
+    setScreen("login");
+
+    try {
+      await logoutUser();
+    } catch (error) {
+      alert(
+        error instanceof Error
+          ? `You were logged out locally, but server logout may have failed: ${error.message}`
+          : "You were logged out locally, but server logout may have failed."
+      );
+    }
+  };
+
   if (user) {
     return (
       <Home
         user={user}
-        onLogout={() => {
-          setUser(null);
-          setScreen("login");
-        }}
+        onLogout={handleLogout}
       />
     );
   }

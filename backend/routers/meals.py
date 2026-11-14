@@ -5,11 +5,12 @@ URL Prefix:
     /api/meals and /api/progress
 
 Endpoints:
-    POST /api/meals - Add a meal or replace an existing meal's tracked values.
-    GET /api/meals/{day} - List the authenticated user's meals for a local date.
-    DELETE /api/meals/{target_meal_id} - Delete an owned meal without a body.
-    DELETE /api/meals - Compatibility route accepting a meal_id body.
-    GET /api/progress/{day} - Calculate nutrition progress for a local date.
+    POST /api/meals - Add a meal or replace an existing meal's tracked values.  
+    GET /api/meals/{day} - List the authenticated user's meals for a local date.  
+    DELETE /api/meals/{target_meal_id} - Delete an owned meal without a body.  
+    DELETE /api/meals - Compatibility route accepting a meal_id body.  
+    GET /api/progress/{day} - Calculate nutrition progress for a local date.  
+
     POST /meals, GET /meals/today, GET /progress/today - Legacy routes.
 """
 from datetime import date, datetime, timedelta, timezone
@@ -96,19 +97,19 @@ def owned_meal(meal_id, user_id, db):
 def save_meal(body: MealSaveRequest, user_id: UserId, db: DB):
     """Save a meal, replacing all tracked nutrients on edit.
 
-    Args:
+    Args:  
         body: Food, timezone-aware consumed_at, optional meal_id and nutrients.
             Omit nutrients to untrack them; zero is tracked.
         user_id: User derived from the authenticated session.
         db: Database session.
 
-    Returns:
+    Returns:  
         dict: The saved meal, including ID and UTC timestamp.
 
-    Raises:
-        HTTPException(401): Invalid session.
-        HTTPException(403): Inactive account.
-        HTTPException(404): Missing or unowned meal.
+    Raises:  
+        HTTPException(401): Invalid session.  
+        HTTPException(403): Inactive account.  
+        HTTPException(404): Missing or unowned meal.  
         HTTPException(422): Invalid food, time, category, or nutrient value.
     """
     require_active_profile(user_id, db)
@@ -153,18 +154,18 @@ def delete_owned_meal(meal_id, user_id, db):
 def delete_meal(target_meal_id: int, user_id: UserId, db: DB):
     """Delete an owned meal. No request body is required.
 
-    Args:
-        target_meal_id: ID of the meal to delete.
-        user_id: User derived from the authenticated session.
+    Args:  
+        target_meal_id: ID of the meal to delete.  
+        user_id: User derived from the authenticated session.  
         db: Database session.
 
-    Returns:
+    Returns:  
         None: HTTP 204 after successful deletion.
 
-    Raises:
-        HTTPException(401): Invalid session.
-        HTTPException(403): Inactive account or unowned meal.
-        HTTPException(404): Meal does not exist.
+    Raises:  
+        HTTPException(401): Invalid session.  
+        HTTPException(403): Inactive account or unowned meal.  
+        HTTPException(404): Meal does not exist.  
         HTTPException(500): Database deletion failed.
     """
     delete_owned_meal(target_meal_id, user_id, db)
@@ -193,17 +194,17 @@ def meals_for_day(day: date, user_id: UserId, db: DB,
                   timezone_end_offset: int | None = Query(default=None, ge=-840, le=840)):
     """List this session user's meals chronologically for a calendar date.
 
-    Args:
-        day: Selected local date, YYYY-MM-DD.
-        timezone_offset: Minutes from the local day start to UTC.
+    Args:  
+        day: Selected local date, YYYY-MM-DD.  
+        timezone_offset: Minutes from the local day start to UTC.  
         timezone_end_offset: Minutes from the next day start to UTC.
 
-    Returns:
+    Returns:  
         list: Owned meals in time order, or 204 with X-Detail for an empty date.
 
-    Raises:
-        HTTPException(401): Invalid session.
-        HTTPException(403): Inactive account.
+    Raises:  
+        HTTPException(401): Invalid session.  
+        HTTPException(403): Inactive account.  
         HTTPException(422): Invalid date or timezone offset.
     """
     require_active_profile(user_id, db)
@@ -276,17 +277,17 @@ def progress_for_day(day: date, user_id: UserId, db: DB,
                      timezone_end_offset: int | None = Query(default=None, ge=-840, le=840)):
     """Calculate progress for a date using meals and goals owned by the session user.
 
-    Args:
-        day: Local calendar date in YYYY-MM-DD form.
-        timezone_offset: Minutes from local midnight to UTC.
+    Args:  
+        day: Local calendar date in YYYY-MM-DD form.  
+        timezone_offset: Minutes from local midnight to UTC.  
         timezone_end_offset: Offset at the next midnight, including DST changes.
 
-    Returns:
+    Returns:  
         dict: Totals and applicable goals, or 204 with X-Detail when no meals exist.
 
-    Raises:
-        HTTPException(401): Invalid session.
-        HTTPException(403): Inactive account.
+    Raises:  
+        HTTPException(401): Invalid session.  
+        HTTPException(403): Inactive account.  
         HTTPException(422): Invalid date or offset.
     """
     require_active_profile(user_id, db)
@@ -343,3 +344,22 @@ def calculate_progress(start, end, day, user_id, db):
         }
 
     return {"date": day.isoformat(), "timezone": "UTC" if start.hour == 0 else "requested local day", "nutrients": progress}
+
+@router.get("/history")
+def meal_history(user_id: UserId, db: DB):
+    """
+    Retrieve the entire meal history for a user. No request body is accepted.
+
+    Parameters:  
+        None.
+
+    Returns:  
+        dict: List of all meal info keyed by consumption date.  
+        message: Details the length of the returned dictionary and success message.
+
+    Raises:  
+        HTTPException(401): Invalid session or user.      
+        HTTPException(403): Inactive user.  
+        HTTPException(500): The database read failed.
+"""
+    raise HTTPException(501) 

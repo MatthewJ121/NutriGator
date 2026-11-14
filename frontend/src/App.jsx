@@ -12,7 +12,7 @@ import "./App.css";
 import logo from "./assets/nutrigator-logo.png";
 import ProgressDashboard from "./ProgressDashboard";
 import BackendConnectionTest from "./BackendConnectionTest";
-import { loginUser } from "./api/auth";
+import { loginUser, logoutUser } from "./api/auth";
 
 const ENABLE_DEMO_LOGIN = import.meta.env.DEV;
 
@@ -183,19 +183,7 @@ function Home({ user, onLogout }) {
     navigate("/", { replace: true });
 
     try {
-      const response = await fetch(`${API_URL}${LOGOUT_ENDPOINT}`, {
-        method: "POST",
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(
-          typeof data.detail === "string"
-            ? data.detail
-            : "The server could not confirm logout."
-        );
-      }
+      await logoutUser();
     } catch (error) {
       alert(
         error instanceof Error
