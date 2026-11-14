@@ -48,7 +48,7 @@ def test_logout_calls_auth_service_and_clears_session_cookie(
 
     with TestClient(main.app) as client:
         response = client.post(
-            "/auth/logout",
+            "/api/profiles/auth/logout",
             cookies={cookie_name: cookie_value},
         )
 
@@ -71,7 +71,7 @@ def test_logout_clears_session_cookie_when_auth_service_fails(monkeypatch):
 
     with TestClient(main.app) as client:
         response = client.post(
-            "/auth/logout",
+            "/api/profiles/auth/logout",
             cookies={"better-auth.session_token": "session-value"},
         )
 
@@ -128,7 +128,7 @@ def test_login_cookie_survives_local_proxy_and_validates_with_neon(monkeypatch, 
 def test_https_cookie_remains_secure_and_host_scoped():
     from routers import auth_helpers
     from fastapi import Request, Response
-    request = Request({"type":"http", "scheme":"https", "server":("app.example",443), "path":"/auth/login", "headers":[]})
+    request = Request({"type":"http", "scheme":"https", "server":("app.example",443), "path":"/api/profiles/auth/login", "headers":[]})
     response = Response()
     auth_helpers.copy_session_cookie(httpx.Response(200,headers={"set-cookie":"__Secure-neon-auth.session_token=signed; Domain=neon.example; Path=/auth; Secure; SameSite=None; Partitioned"}),response,request)
     cookie = response.headers["set-cookie"]

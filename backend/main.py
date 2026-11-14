@@ -6,7 +6,8 @@ from routers import externals, goals, profiles, meals
 app = FastAPI(title="NutriGator Backend")
 
 app.include_router(goals.router)
-app.include_router(profiles.router)
+app.include_router(profiles.auth_router)
+app.include_router(profiles.password_router)
 app.include_router(externals.router)
 app.include_router(meals.router)
 app.include_router(meals.progress_router)

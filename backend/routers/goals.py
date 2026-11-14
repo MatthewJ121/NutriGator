@@ -5,20 +5,18 @@ URL Prefix:
     /api/goals
 
 Endpoints:  
-    #TODO update docstring when implmenting #44
-    POST /{user_id} - Create a new goal for a specific user and date.  
-    PUT /{user_id} - Update an existing goal for a specific user and date.  
-    GET /{user_id} - Retrieve all goals associated with a user, sorted chronologically.  
-    DELETE /{user_id}/{effective_date} - Delete a specified goal for a user.
+    POST / - Create a new goal for the authenticated user and date.
+    PUT / - Update an existing goal for the authenticated user and date.
+    GET / - Retrieve all goals for the authenticated user, sorted chronologically.
+    DELETE /{effective_date} - Delete a specified goal for the authenticated user.
 """
-
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict, Field
-import uuid
 from datetime import date
 import database
+from routers.auth_helpers import UserId
 
 router = APIRouter(
     prefix="/api/goals",
@@ -41,8 +39,8 @@ class Goal(BaseModel):
 
 '''API Endpoints'''
 
-@router.post("/{target_user_id}", status_code=201)
-async def create_goal(target_user_id: uuid.UUID, goal: Goal):
+@router.post("", status_code=201)
+async def create_goal(goal: Goal, user_id: UserId):
     """
     Create a new nutrition goal for a user.
 
@@ -53,7 +51,7 @@ async def create_goal(target_user_id: uuid.UUID, goal: Goal):
     Do not use negative numbers to attempt to untrack a field.
 
     Parameters:  
-        target_user_id (UUID): ID of user to create a goal for.  
+        user_id: User derived from the authenticated session.  
         goal (Goal): Contains nutrient targets, goal id, and effective date.
 
     Returns:  
@@ -65,13 +63,13 @@ async def create_goal(target_user_id: uuid.UUID, goal: Goal):
         HTTPException(500): There is a database write failure.
     """
     with Session(database.engine) as session:
-        target = select(database.Profiles).where(database.Profiles.user_id == target_user_id)
+        target = select(database.Profiles).where(database.Profiles.user_id == user_id)
         user = session.scalars(target).first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
         target = select(database.Goals).where(
-            (database.Goals.user_id == target_user_id)
+            (database.Goals.user_id == user_id)
             & (database.Goals.effective_date == goal.effective_date))
         
         existing_goal = session.scalars(target).first()
@@ -80,7 +78,7 @@ async def create_goal(target_user_id: uuid.UUID, goal: Goal):
 
         try:
             new_goal = database.Goals(
-                user_id=target_user_id,
+                user_id=user_id,
                 effective_date=goal.effective_date,
                 calories=goal.calories,
                 protein=round(goal.protein, 1),
@@ -102,8 +100,8 @@ async def create_goal(target_user_id: uuid.UUID, goal: Goal):
             "goal id": goal_id}
 
 
-@router.put("/{target_user_id}")
-async def update_goal(target_user_id: uuid.UUID, goal: Goal):
+@router.put("")
+async def update_goal(goal: Goal, user_id: UserId):
     """
     Update a user's existing goal at a specifed effective date.
 
@@ -117,7 +115,7 @@ async def update_goal(target_user_id: uuid.UUID, goal: Goal):
     Values of 0 indicate the user intends to intake no amount of that nutrient. 
 
     Args:  
-        target_user_id: ID of user to modify a goal for.  
+        user_id: User derived from the authenticated session.
         goal (Goal): Contains nutrient targets, goal id, and effective date.
         
     Returns:  
@@ -128,13 +126,13 @@ async def update_goal(target_user_id: uuid.UUID, goal: Goal):
         HTTPException(500): There is a database write failure.
     """
     with Session(database.engine) as session:
-        target = select(database.Profiles).where(database.Profiles.user_id == target_user_id)
+        target = select(database.Profiles).where(database.Profiles.user_id == user_id)
         user = session.scalars(target).first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
         target = select(database.Goals).where(
-            (database.Goals.user_id == target_user_id)
+            (database.Goals.user_id == user_id)
             & (database.Goals.effective_date == goal.effective_date)
         )
         existing_goal = session.scalars(target).first()
@@ -159,8 +157,8 @@ async def update_goal(target_user_id: uuid.UUID, goal: Goal):
             "goal id": goal_id}
 
 
-@router.get("/{target_user_id}")
-async def get_goal(target_user_id: uuid.UUID):
+@router.get("")
+async def get_goal(user_id: UserId):
     """
     Get all goals belonging to a user ordered by effective date.
 
@@ -168,7 +166,7 @@ async def get_goal(target_user_id: uuid.UUID):
     field values, anything holding -1 should be discarded. 
 
     Args:  
-        target_user_id: ID of the user whose goals are requested.
+        user_id: User derived from the authenticated session.
         
     Returns:  
         dict: Number of found goals and dict of those goals.
@@ -177,14 +175,14 @@ async def get_goal(target_user_id: uuid.UUID):
         HTTPException(404): If the user profile does not exist.
     """
     with Session(database.engine) as session:
-        target = select(database.Profiles).where(database.Profiles.user_id == target_user_id)
+        target = select(database.Profiles).where(database.Profiles.user_id == user_id)
         user = session.scalars(target).first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
         target = (
             select(database.Goals)
-            .where(database.Goals.user_id == target_user_id)
+            .where(database.Goals.user_id == user_id)
             .order_by(database.Goals.effective_date)
         )
         goals = session.scalars(target).all()
@@ -210,31 +208,31 @@ async def get_goal(target_user_id: uuid.UUID):
     }
 
 
-@router.delete("/{target_user_id}/{target_date}", status_code=204)
-async def delete_goal(target_user_id: uuid.UUID, target_date: date):
+@router.delete("/{target_date}", status_code=204)
+async def delete_goal(target_date: date, user_id: UserId):
     """
-        Delete the goal for a user on the specified effective date.
-        
-        Args:  
-            target_user_id: ID of the user for the goal.  
-            target_date: Date on which a goal is to be deleted.
-            
-        Returns:  
-            None.
-    
-        Raises:  
-            HTTPException(404): The user profile or goal does not exist.  
-            HTTPException(500): The database delete failed.
-        """
+    Delete the goal for a user on the specified effective date.
+
+    Args:
+        target_date: Date on which a goal is to be deleted.
+        user_id: User derived from the authenticated session.
+
+    Returns:
+        None.
+
+    Raises:
+        HTTPException(404): The user profile or goal does not exist.
+        HTTPException(500): The database delete failed.
+    """
     with Session(database.engine) as session:
         user_query = select(database.Profiles).where(
-            database.Profiles.user_id == target_user_id
+            database.Profiles.user_id == user_id
         )
         if not session.scalars(user_query).first():
             raise HTTPException(status_code=404, detail="User not found")
 
         goal_query = select(database.Goals).where(
-            (database.Goals.user_id == target_user_id)
+            (database.Goals.user_id == user_id)
             & (database.Goals.effective_date == target_date)
         )
         goal = session.scalars(goal_query).first()
@@ -248,4 +246,4 @@ async def delete_goal(target_user_id: uuid.UUID, target_date: date):
             session.rollback()
             raise HTTPException(status_code=500, detail="Error deleting goal: " + str(e))
 
-    return None
+    return

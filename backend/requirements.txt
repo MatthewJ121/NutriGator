@@ -9,4 +9,4 @@ httpx
 email-validator
 pytest
 google-genai
-
+ruff
