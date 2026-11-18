@@ -196,7 +196,7 @@ export default function FoodLog({ userId, isDemo = false, onMealsChange, onUnaut
           <button className="logDateBtn" disabled={saving || selectedDate >= getLocalDate()} onClick={() => changeDay(shiftDate(selectedDate, 1))}>Next →</button>
         </div>
       </div>
-      {renderSummary && <div className="logSummary">{renderSummary(meals)}</div>}
+      {renderSummary && <div className="logSummary">{renderSummary(meals, selectedDate)}</div>}
       <div className="logResetRow"><button className="logResetBtn" disabled={saving || !meals.length} onClick={resetLog}>Reset Log</button></div>
       {error && !editor && <p role="alert" className="logError">{error}</p>}
       {loading && <p role="status">Loading meals…</p>}
