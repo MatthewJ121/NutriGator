@@ -10,8 +10,8 @@ import {
   parseGoalDraft,
 } from "../utils/nutrition";
 
-async function saveGoals(userId, goals) {
-  const { values } = makeGoalRequests(goals, getLocalDate());
+async function saveGoals(userId, goals, selectedDate) {
+  const { values } = makeGoalRequests(goals, selectedDate);
 
   try {
     await createGoal(userId, values);
@@ -27,6 +27,7 @@ async function saveGoals(userId, goals) {
 
 export default function GoalsEditor({
   userId,
+  selectedDate = getLocalDate(),
   isDemo = false,
   goals,
   onSaved,
@@ -82,7 +83,7 @@ export default function GoalsEditor({
     setSaving(true);
 
     try {
-      await saveGoals(userId, result.goals);
+      await saveGoals(userId, result.goals, selectedDate);
 
       onSaved(result.goals, "Nutrition goals saved!");
     } catch (err) {
@@ -103,6 +104,7 @@ export default function GoalsEditor({
       noValidate
     >
       <h3>Manage Nutrition Goals</h3>
+      <p className="geHint">Goals effective {new Date(`${selectedDate}T12:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
       <p className="geHint">
         Check the goals you want to track and enter a target for each one.
       </p>

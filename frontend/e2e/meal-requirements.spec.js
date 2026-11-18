@@ -9,7 +9,7 @@ const seed = () => [
 ];
 
 async function setup(page, initial = seed()) {
-  const state = { rows: initial, requests: [], usdaRequests: [], expired: null, nextId: 100 };
+  const state = { rows: initial, requests: [], usdaRequests: [], expired: null, nextId: 100, goals: [] };
   await page.clock.install({ time: new Date(`${TODAY}T17:00:00Z`) });
   await page.route(/^http:\/\/(localhost|127\.0\.0\.1):8000\//, async (route) => {
     const request = route.request();
@@ -18,8 +18,16 @@ async function setup(page, initial = seed()) {
     if (method === 'OPTIONS') return route.fulfill({ status: 204 });
     state.requests.push({ path, method, body: request.postDataJSON() });
     if (state.expired === `${method} ${path}` || state.expired === method) return route.fulfill({status:401,json:{detail:'Expired session'}});
-    if (path === '/auth/login') return route.fulfill({json:{user:{id:'audit-user',email:'audit@example.com',name:'Audit'}}});
-    if (path.startsWith('/api/goals/')) return route.fulfill({json:{goals:[]}});
+    if (path === '/api/profiles/auth/login') return route.fulfill({json:{user:{id:'audit-user',email:'audit@example.com',name:'Audit'}}});
+    if (path === '/api/profiles/auth/logout') return route.fulfill({json:{message:'Logged out'}});
+    if (path === '/api/goals') {
+      if (method === 'GET') return route.fulfill({json:{goals:state.goals}});
+      const body = request.postDataJSON();
+      const exists = state.goals.some(row => row.effective_date === body.effective_date);
+      if (method === 'POST' && exists) return route.fulfill({status:409,json:{detail:'Already exists'}});
+      state.goals = [...state.goals.filter(row => row.effective_date !== body.effective_date), body];
+      return route.fulfill({json:{message:'Saved'}});
+    }
     if (path.startsWith('/api/meals/') && method === 'GET') {
       const day = path.split('/').pop();
       const rows = state.rows.filter(row => new Date(row.consumed_at).toLocaleDateString('en-CA',{timeZone:'America/New_York'}) === day);
@@ -222,4 +230,48 @@ test('new meals use the current time and keep the chosen section after reload', 
   await page.getByRole('button',{name:'Add to Lunch',exact:true}).click();
   await expect.poll(() => state.rows.find(r => r.food_name === 'Rice & beans')?.consumed_at).toBe(`${TODAY}T20:09:00.000Z`);
   await expect(page.getByRole('list',{name:'Lunch meals'})).toContainText('Rice & beans');
+});
+
+
+test('historical goals load and save against the selected date without overwriting today', async ({page}) => {
+  const state = await setup(page);
+  state.goals = [
+    { effective_date: YESTERDAY, calories: 1800, protein: 90 },
+    { effective_date: TODAY, calories: 2400, protein: 120 },
+  ];
+  await page.getByRole('button',{name:'← Prev'}).click();
+  await expect(page.locator('.tdGoalCard')).toContainText('Cals: 300/1800');
+  await page.getByRole('button',{name:'Edit Goals',exact:true}).click();
+  await expect(page.getByLabel('Calories target')).toHaveValue('1800');
+  await expect(page.getByText('Goals effective November 11, 2026')).toBeVisible();
+  await page.getByLabel('Calories target').fill('1900');
+  await page.getByRole('button',{name:'Save Goals',exact:true}).click();
+  await expect(page.locator('.tdGoalCard')).toContainText('Cals: 300/1900');
+  expect(state.goals.find(row => row.effective_date === TODAY).calories).toBe(2400);
+  const writes = state.requests.filter(r => r.path === '/api/goals' && ['POST','PUT'].includes(r.method));
+  expect(writes.map(r => r.method)).toEqual(['POST','PUT']);
+  expect(writes.every(r => r.body.effective_date === YESTERDAY)).toBeTruthy();
+  await page.getByRole('button',{name:'Today',exact:true}).click();
+  await expect(page.locator('.tdGoalCard')).toContainText('Cals: 300.5/2400');
+  await page.getByRole('button',{name:'← Prev'}).click();
+  await expect(page.locator('.tdGoalCard')).toContainText('Cals: 300/1900');
+  await page.getByRole('button',{name:'Edit Goals',exact:true}).click();
+  await page.getByLabel('Calories target').fill('9999');
+  await page.getByRole('button',{name:'Today',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Save Goals',exact:true})).toHaveCount(0);
+  expect(state.goals.find(row => row.effective_date === YESTERDAY).calories).toBe(1900);
+});
+
+test('a historical day inherits only earlier goals and creates its own effective date when saved', async ({page}) => {
+  const state = await setup(page);
+  state.goals = [{ effective_date:'2026-11-01', calories:1600 }, { effective_date:TODAY, calories:2400 }];
+  await page.getByRole('button',{name:'← Prev'}).click();
+  await expect(page.locator('.tdGoalCard')).toContainText('Cals: 300/1600');
+  await page.getByRole('button',{name:'Edit Goals',exact:true}).click();
+  await page.getByLabel('Calories target').fill('1700');
+  await page.getByRole('button',{name:'Save Goals',exact:true}).click();
+  await expect(page.locator('.tdGoalCard')).toContainText('Cals: 300/1700');
+  expect(state.goals.find(row => row.effective_date === '2026-11-01').calories).toBe(1600);
+  expect(state.goals.find(row => row.effective_date === TODAY).calories).toBe(2400);
+  expect(state.goals.find(row => row.effective_date === YESTERDAY).calories).toBe(1700);
 });

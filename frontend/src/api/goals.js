@@ -8,7 +8,7 @@ function goalsEndpoint(userId) {
     throw new Error("A user ID is required.");
   }
 
-  return `${API_URL}/api/goals/${encodeURIComponent(userId)}`;
+  return `${API_URL}/api/goals`;
 }
 
 async function requestGoal(method, userId, goals) {

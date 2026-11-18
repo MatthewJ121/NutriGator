@@ -2,7 +2,7 @@ import { useState } from "react";
 import "../ProgressDashboard.css";
 import GoalsEditor from "./GoalsEditor";
 import useNutritionGoals from "../hooks/useNutritionGoals";
-import { NUTRIENT_FIELDS, makeZeroTotals } from "../utils/nutrition";
+import { NUTRIENT_FIELDS, makeZeroTotals, getLocalDate } from "../utils/nutrition";
 
 
 function roundNumber(value) {
@@ -64,11 +64,12 @@ function Ring({
 export default function GoalsDashboard({
   userId,
   onUnauthorized,
+  selectedDate = getLocalDate(),
   isDemo = false,
   totals = makeZeroTotals(),
 }) {
   const [slide, setSlide] = useState(0);
-  const { goals, setGoals, loadError } = useNutritionGoals(userId, isDemo, onUnauthorized);
+  const { goals, setGoals, loadError, loading } = useNutritionGoals(userId, isDemo, onUnauthorized, selectedDate);
 
   const [editing, setEditing] = useState(false);
   const [success, setSuccess] = useState("");
@@ -252,6 +253,7 @@ export default function GoalsDashboard({
             type="button"
             className="tdEditButton"
             onClick={startEditing}
+            disabled={loading || Boolean(loadError)}
           >
             Edit Goals
           </button>
@@ -261,6 +263,7 @@ export default function GoalsDashboard({
       {/* EDIT FORM */}
       {editing && (
         <GoalsEditor
+          selectedDate={selectedDate}
           userId={userId}
           isDemo={isDemo}
           goals={goals}

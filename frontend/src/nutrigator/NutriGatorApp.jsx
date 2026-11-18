@@ -164,8 +164,10 @@ function Home({ user, onLogout }) {
         <FoodLog
           userId={user.userId}
           isDemo={user.isDemo}
-          renderSummary={(meals) => (
+          renderSummary={(meals, selectedDate) => (
             <GoalsDashboard
+              key={selectedDate}
+              selectedDate={selectedDate}
               onUnauthorized={onLogout}
               userId={user.userId}
               isDemo={user.isDemo}
