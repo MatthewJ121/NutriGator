@@ -1,6 +1,6 @@
 
 const API_URL = (
-  import.meta.env.VITE_API_URL || "http://localhost:8000"
+  import.meta.env?.VITE_API_URL || "http://localhost:8000"
 ).replace(/\/$/, "");
 
 function goalsEndpoint(userId) {
@@ -8,7 +8,7 @@ function goalsEndpoint(userId) {
     throw new Error("A user ID is required.");
   }
 
-  return `${API_URL}/api/goals/${encodeURIComponent(userId)}`;
+  return `${API_URL}/api/goals`;
 }
 
 async function requestGoal(method, userId, goals) {

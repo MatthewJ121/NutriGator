@@ -22,17 +22,11 @@ from sqlalchemy import case, func, select
 from sqlalchemy.exc import SQLAlchemyError
 
 import database
-from routers.auth_helpers import DB, UserId
+from routers.auth_helpers import DB, UserId, require_active_profile
 
 router = APIRouter(prefix="/api/meals", tags=["Meals"])
 progress_router = APIRouter(prefix="/api/progress", tags=["Progress"])
 legacy_router = APIRouter(tags=["Legacy meals and progress"])
-
-
-def require_active_profile(user_id, db):
-    profile = db.get(database.Profiles, user_id)
-    if not profile or not profile.is_active:
-        raise HTTPException(403, "This account is not active")
 
 
 def day_bounds(day, start_offset=0, end_offset=None):

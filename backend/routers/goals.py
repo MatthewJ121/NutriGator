@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict, Field
 from datetime import date
 import database
-from routers.auth_helpers import UserId
+from routers.auth_helpers import DB, UserId, require_active_profile
 
 router = APIRouter(
     prefix="/api/goals",
@@ -40,7 +40,7 @@ class Goal(BaseModel):
 '''API Endpoints'''
 
 @router.post("", status_code=201)
-async def create_goal(goal: Goal, user_id: UserId):
+async def create_goal(goal: Goal, user_id: UserId, db: DB):
     """
     Create a new nutrition goal for a user.
 
@@ -63,6 +63,8 @@ async def create_goal(goal: Goal, user_id: UserId):
         HTTPException(500): There is a database write failure.
     """
     with Session(database.engine) as session:
+        require_active_profile(user_id, db)
+        
         target = select(database.Profiles).where(database.Profiles.user_id == user_id)
         user = session.scalars(target).first()
         if not user:
@@ -101,7 +103,7 @@ async def create_goal(goal: Goal, user_id: UserId):
 
 
 @router.put("")
-async def update_goal(goal: Goal, user_id: UserId):
+async def update_goal(goal: Goal, user_id: UserId, db: DB):
     """
     Update a user's existing goal at a specifed effective date.
 
@@ -126,6 +128,8 @@ async def update_goal(goal: Goal, user_id: UserId):
         HTTPException(500): There is a database write failure.
     """
     with Session(database.engine) as session:
+        require_active_profile(user_id, db)
+        
         target = select(database.Profiles).where(database.Profiles.user_id == user_id)
         user = session.scalars(target).first()
         if not user:
@@ -158,7 +162,7 @@ async def update_goal(goal: Goal, user_id: UserId):
 
 
 @router.get("")
-async def get_goal(user_id: UserId):
+async def get_goal(user_id: UserId, db: DB):
     """
     Get all goals belonging to a user ordered by effective date.
 
@@ -175,6 +179,8 @@ async def get_goal(user_id: UserId):
         HTTPException(404): If the user profile does not exist.
     """
     with Session(database.engine) as session:
+        require_active_profile(user_id, db)
+        
         target = select(database.Profiles).where(database.Profiles.user_id == user_id)
         user = session.scalars(target).first()
         if not user:
@@ -209,7 +215,7 @@ async def get_goal(user_id: UserId):
 
 
 @router.delete("/{target_date}", status_code=204)
-async def delete_goal(target_date: date, user_id: UserId):
+async def delete_goal(target_date: date, user_id: UserId, db: DB):
     """
     Delete the goal for a user on the specified effective date.
 
@@ -225,6 +231,8 @@ async def delete_goal(target_date: date, user_id: UserId):
         HTTPException(500): The database delete failed.
     """
     with Session(database.engine) as session:
+        require_active_profile(user_id, db)
+        
         user_query = select(database.Profiles).where(
             database.Profiles.user_id == user_id
         )

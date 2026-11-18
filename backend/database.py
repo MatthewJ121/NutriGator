@@ -54,3 +54,4 @@ class Meals(Base):
     trans_fats: Mapped[float] = mapped_column()
     saturated_fats: Mapped[float] = mapped_column()
     total_fats: Mapped[float] = mapped_column()
+    meal_type: Mapped[str] = mapped_column()
