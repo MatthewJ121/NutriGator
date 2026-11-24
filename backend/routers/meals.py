@@ -22,17 +22,11 @@ from sqlalchemy import case, func, select
 from sqlalchemy.exc import SQLAlchemyError
 
 import database
-from routers.auth_helpers import DB, UserId
+from routers.auth_helpers import DB, UserId, require_active_profile
 
 router = APIRouter(prefix="/api/meals", tags=["Meals"])
 progress_router = APIRouter(prefix="/api/progress", tags=["Progress"])
 legacy_router = APIRouter(tags=["Legacy meals and progress"])
-
-
-def require_active_profile(user_id, db):
-    profile = db.get(database.Profiles, user_id)
-    if not profile or not profile.is_active:
-        raise HTTPException(403, "This account is not active")
 
 
 def day_bounds(day, start_offset=0, end_offset=None):
@@ -168,6 +162,7 @@ def delete_meal(target_meal_id: int, user_id: UserId, db: DB):
         HTTPException(404): Meal does not exist.  
         HTTPException(500): Database deletion failed.
     """
+    require_active_profile(user_id, db)
     delete_owned_meal(target_meal_id, user_id, db)
 
 
@@ -185,6 +180,7 @@ def delete_meal_body(body: MealDeleteRequest, user_id: UserId, db: DB):
     Raises:
         HTTPException: Uses the same 401/403/404/500 contract as delete_meal.
     """
+    require_active_profile(user_id, db)
     delete_owned_meal(body.meal_id, user_id, db)
 
 
@@ -254,6 +250,7 @@ def add_meal(body: MealRequest, user_id: UserId, db: DB):
 
 @legacy_router.get("/meals/today")
 def todays_meals(user_id: UserId, db: DB):
+    require_active_profile(user_id, db)
     start, end = utc_day()
     meals = db.scalars(
         select(database.Meals).where(
@@ -267,6 +264,7 @@ def todays_meals(user_id: UserId, db: DB):
 
 @legacy_router.get("/progress/today")
 def today_progress(user_id: UserId, db: DB):
+    require_active_profile(user_id, db)
     start, end = utc_day()
     return calculate_progress(start, end, start.date(), user_id, db)
 
@@ -362,4 +360,4 @@ def meal_history(user_id: UserId, db: DB):
         HTTPException(403): Inactive user.  
         HTTPException(500): The database read failed.
 """
-    raise HTTPException(501) 
+    raise HTTPException(501)

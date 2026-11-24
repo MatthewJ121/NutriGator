@@ -192,6 +192,39 @@ def test_bad_registration_never_calls_auth(api_client, monkeypatch):
     assert response.status_code == 422
 
 
+def test_login_reports_inactive_account_without_existing_session(api_client, monkeypatch):
+    client, sessions = api_client
+    main.app.dependency_overrides.pop(auth_helpers.current_user)
+    auth_id = "inactive-better-auth-user"
+    with sessions() as db:
+        db.add(database.Profiles(
+            user_id=auth_helpers.local_user_id(auth_id),
+            first_name="Inactive",
+            is_premium=False,
+            is_active=False,
+        ))
+        db.commit()
+
+    async def fake_auth(method, route, *, payload=None, cookies=None):
+        assert method == "POST"
+        assert route == "sign-in/email"
+        assert payload == {
+            "email": "inactive@example.com",
+            "password": "valid-password",
+        }
+        assert cookies is None
+        return httpx.Response(200), {"user": {"id": auth_id}}
+
+    monkeypatch.setattr(profiles, "auth_request", fake_auth)
+    response = client.post("/api/profiles/auth/login", json={
+        "email": "inactive@example.com",
+        "password": "valid-password",
+    })
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "This account is not active"}
+
+
 def test_missing_session_is_rejected(monkeypatch):
     # Test this without the authentication override from the other tests.
     async def should_not_call(*args, **kwargs):

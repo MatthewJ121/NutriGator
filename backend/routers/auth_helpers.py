@@ -128,4 +128,11 @@ async def current_user(request: Request) -> uuid.UUID:
     return local_user_id(str(user["id"]))
 
 
+def require_active_profile(user_id, db):
+    profile = db.get(database.Profiles, user_id)
+    if not profile:
+        raise HTTPException(404, "User not found")
+    if not profile.is_active:
+        raise HTTPException(403, "This account is not active")
+
 UserId = Annotated[uuid.UUID, Depends(current_user)]
