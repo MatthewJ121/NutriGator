@@ -62,6 +62,18 @@ async def auth_request(method: str, route: str, *, payload=None, cookies=None):
 LOCAL_AUTH_COOKIE_PREFIX = "nutrigator_auth_"
 
 
+def session_cookie_policy(request: Request):
+    local_http = request.url.scheme == "http" and request.url.hostname in {
+        "localhost", "127.0.0.1", "::1", "testserver",
+    }
+    same_site = os.getenv("AUTH_COOKIE_SAMESITE", "lax").lower()
+    if same_site not in {"lax", "strict", "none"}:
+        raise RuntimeError("AUTH_COOKIE_SAMESITE must be lax, strict, or none")
+    if local_http and same_site == "none":
+        same_site = "lax"
+    return local_http, same_site, not local_http or same_site == "none"
+
+
 def local_cookie_name(upstream_name):
     encoded = base64.urlsafe_b64encode(upstream_name.encode()).decode().rstrip("=")
     return LOCAL_AUTH_COOKIE_PREFIX + encoded
@@ -88,10 +100,10 @@ def copy_session_cookie(upstream: httpx.Response, response: Response, request: R
     """Scope Neon cookies to this API's host and path for same-site proxying.
 
     Only HTTP loopback development uses unprefixed, non-Secure local names.
-    HTTPS retains Secure; all cookies remain HttpOnly and SameSite=Lax.
+    HTTPS cookies remain Secure and HttpOnly; SameSite is configurable.
     Neon still validates the original signed cookie on every protected request.
     """
-    local_http = request.url.scheme == "http" and request.url.hostname in {"localhost", "127.0.0.1", "::1", "testserver"}
+    local_http, same_site, secure = session_cookie_policy(request)
     for header in upstream.headers.get_list("set-cookie"):
         # Partitioned is unsupported by Python 3.12's cookie parser and is
         # unnecessary when the auth cookie belongs to our same-site API.
@@ -104,16 +116,17 @@ def copy_session_cookie(upstream: httpx.Response, response: Response, request: R
                 max_age=int(cookie["max-age"]) if cookie["max-age"] else None,
                 expires=cookie["expires"] or None,
                 path="/",
-                secure=not local_http,
+                secure=secure,
                 httponly=True,
-                samesite="lax",
+                samesite=same_site,
             )
 
 
 def clear_session_cookies(request: Request, response: Response):
+    _, same_site, secure = session_cookie_policy(request)
     for name in request.cookies:
         if name.startswith(LOCAL_AUTH_COOKIE_PREFIX) or ("auth" in name and "session" in name) or name in {"session_token", "session_data", "session_challenge", "session_challange"}:
-            response.delete_cookie(name, path="/", secure=request.url.scheme == "https", httponly=True, samesite="lax")
+            response.delete_cookie(name, path="/", secure=secure, httponly=True, samesite=same_site)
 
 
 async def current_user(request: Request) -> uuid.UUID:
