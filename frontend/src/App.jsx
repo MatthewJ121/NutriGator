@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import {
-  BrowserRouter,
+  HashRouter,
   Routes,
   Route,
   Navigate,
@@ -270,7 +270,7 @@ export default function App() {
   const [user, setUser] = useState(null);
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         <Route
           path="/"
@@ -302,6 +302,6 @@ export default function App() {
           element={<Navigate to="/" replace />}
         />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }

@@ -138,6 +138,34 @@ def test_https_cookie_remains_secure_and_host_scoped():
     assert "SameSite=lax" in cookie and "Domain=" not in cookie
 
 
+def test_https_cookie_can_use_cross_site_policy(monkeypatch):
+    from fastapi import Request, Response
+    from routers import auth_helpers
+
+    monkeypatch.setenv("AUTH_COOKIE_SAMESITE", "none")
+    request = Request({
+        "type": "http",
+        "scheme": "https",
+        "server": ("api.example.com", 443),
+        "path": "/api/profiles/auth/login",
+        "headers": [],
+    })
+    response = Response()
+
+    auth_helpers.copy_session_cookie(
+        httpx.Response(
+            200,
+            headers={"set-cookie": "session_token=signed; Path=/; HttpOnly"},
+        ),
+        response,
+        request,
+    )
+
+    cookie = response.headers["set-cookie"]
+    assert "SameSite=none" in cookie
+    assert "Secure" in cookie
+
+
 def test_login_returns_service_unavailable_when_profile_database_is_down(monkeypatch):
     async def fake_auth_request(method, route, *, payload=None, cookies=None):
         assert method == "POST" and route == "sign-in/email"
