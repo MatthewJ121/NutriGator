@@ -148,11 +148,10 @@ export function parseMealDraft(draft) {
     const text = String(draft[key] ?? "").trim();
 
     if (text === "") {
-      meal[key] = 0;
       continue;
     }
 
-    if (!NUMBER_PATTERN.test(text)) {
+    if (!NUMBER_PATTERN.test(text) || !Number.isFinite(Number(text))) {
       return { error: `${label} must be a number that is 0 or more.` };
     }
 
@@ -167,7 +166,8 @@ export function addUpMeals(meals) {
 
   for (const meal of meals) {
     for (const { key } of NUTRIENT_FIELDS) {
-      totals[key] += Number(meal[key]) || 0;
+      const value = Number(meal[key]);
+      if (Number.isFinite(value) && value >= 0) totals[key] += value;
     }
   }
 

@@ -105,12 +105,7 @@ describe("meal form", () => {
     assert.deepEqual(meal, {
       food_name: "Apple",
       calories: 95,
-      protein: 0,
       carbs: 25.1,
-      cholesterol: 0,
-      trans_fats: 0,
-      saturated_fats: 0,
-      total_fats: 0,
     });
   });
 
@@ -141,4 +136,12 @@ describe("meal form", () => {
     assert.equal(totals.protein, 15);
     assert.equal(totals.carbs, 0);
   });
+});
+
+test("blank nutrients are omitted, zero is tracked, and negatives do not reduce totals", () => {
+  const { meal } = parseMealDraft({ ...makeEmptyMealDraft(), food_name: "Test", protein: "0" });
+  assert.equal(meal.protein, 0);
+  assert.equal(Object.hasOwn(meal, "carbs"), false);
+  assert.equal(addUpMeals([{ protein: -1 }, { protein: 4 }]).protein, 4);
+  assert.ok(parseMealDraft({ ...makeEmptyMealDraft(), food_name: "Test", protein: "9".repeat(400) }).error);
 });

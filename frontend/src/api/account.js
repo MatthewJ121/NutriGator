@@ -1,5 +1,5 @@
 const API_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:8000";
+  (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "");
 
 function readError(data, fallbackMessage) {
   if (typeof data.detail === "string") {
@@ -17,7 +17,7 @@ export async function signUp(name, email, password) {
   let response;
 
   try {
-    response = await fetch(`${API_URL}/auth/register`, {
+    response = await fetch(`${API_URL}/api/profiles/auth/register`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

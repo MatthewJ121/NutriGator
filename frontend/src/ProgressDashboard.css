@@ -275,3 +275,15 @@
     grid-template-columns: 1fr;
   }
 }
+
+.tdCardsRow.tdNutritionOnly { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+@media (max-width: 420px) { .tdCardsRow.tdNutritionOnly { grid-template-columns: 1fr; } }
+
+.tdGoalActions > .tdEditButton {
+  padding: 5px 10px;
+  font-size: 12px;
+  border-width: 1px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+.tdGoalActions { margin-top: 8px; }

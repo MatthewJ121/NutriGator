@@ -17,6 +17,7 @@ from sqlalchemy.pool import StaticPool
 
 import database
 import main
+from routers import auth_helpers
 
 '''Test infastructure'''
 @pytest.fixture
@@ -28,17 +29,27 @@ def api_client():
     )
     database.Base.metadata.create_all(engine)
     original_engine = getattr(database, "engine", None)
+    original_overrides = main.app.dependency_overrides.copy()
     database.engine = engine
 
+    async def current_user():
+        return TEST_USER_ID
+
+    main.app.dependency_overrides[auth_helpers.current_user] = current_user
     with TestClient(main.app) as client:
         yield client, sessionmaker(bind=engine)
 
+    main.app.dependency_overrides.clear()
+    main.app.dependency_overrides.update(original_overrides)
     database.engine = original_engine
     engine.dispose()
 
 
+TEST_USER_ID = uuid.UUID("11111111-1111-4111-8111-111111111111")
+
+
 def create_profile(session_factory, user_id=None):
-    user_id = user_id or uuid.uuid4()
+    user_id = user_id or TEST_USER_ID
     with session_factory() as session:
         session.add(
             database.Profiles(
@@ -73,14 +84,14 @@ def test_goal_set_valid_creates_goal_returns_201(api_client):
     user_id = create_profile(session_factory)
 
     response = client.post(
-        f"/api/goals/{user_id}",
+        "/api/goals",
         json=make_goal_payload(calories=2100.5),
     )
 
     assert response.status_code == 201, response.text
     assert response.json()["message"] == "Goal created successfully"
 
-    fetched = client.get(f"/api/goals/{user_id}")
+    fetched = client.get("/api/goals")
     assert fetched.status_code == 200, fetched.text
     goals = fetched.json()["goals"]
     assert len(goals) == 1
@@ -93,23 +104,22 @@ def test_goal_set_invalid_goal_input_retuns_422(api_client):
     user_id = create_profile(session_factory)
 
     response = client.post(
-        f"/api/goals/{user_id}",
+        "/api/goals",
         json=make_goal_payload(protein="Twenty"),
     )
 
     assert response.status_code == 422, response.text
 
-    fetched = client.get(f"/api/goals/{user_id}")
+    fetched = client.get("/api/goals")
     assert fetched.status_code == 200, fetched.text
     assert fetched.json()["goals"] == []
 
 
 def test_goal_set_invalid_user_id_returns_404(api_client):
     client, _ = api_client
-    fake_user_id = uuid.uuid4()
 
     response = client.post(
-        f"/api/goals/{fake_user_id}",
+        "/api/goals",
         json=make_goal_payload(),
     )
 
@@ -122,8 +132,8 @@ def test_goal_set_duplicate_date_returns_409(api_client):
     user_id = create_profile(session_factory)
     payload = make_goal_payload()
 
-    first = client.post(f"/api/goals/{user_id}", json=payload)
-    second = client.post(f"/api/goals/{user_id}", json=payload)
+    first = client.post("/api/goals", json=payload)
+    second = client.post("/api/goals", json=payload)
 
     assert first.status_code == 201, first.text
     assert second.status_code == 409, second.text
@@ -142,7 +152,7 @@ def test_goal_set_invalid_category_input_returns_422(api_client):
     }
 
     response = client.post(
-        f"/api/goals/{user_id}",
+        "/api/goals",
         json=payload
     )
 
@@ -170,14 +180,14 @@ def test_goal_change_valid_returns_200(api_client):
         session.commit()
 
     response = client.put(
-        f"/api/goals/{user_id}",
+        "/api/goals",
         json=make_goal_payload(effective_date=str(goal_date), protein=40),
     )
 
     assert response.status_code == 200, response.text
     assert response.json()["message"] == "Goal updated successfully"
 
-    fetched = client.get(f"/api/goals/{user_id}")
+    fetched = client.get("/api/goals")
     assert fetched.status_code == 200, fetched.text
     saved_goal = fetched.json()["goals"][0]
     assert saved_goal["protein"] == 40
@@ -206,13 +216,13 @@ def test_goal_change_invalid_goal_input_returns_422(api_client):
         session.commit()
 
     response = client.put(
-        f"/api/goals/{user_id}",
+        "/api/goals",
         json=make_goal_payload(effective_date=str(goal_date), protein="Twenty"),
     )
 
     assert response.status_code == 422, response.text
 
-    fetched = client.get(f"/api/goals/{user_id}")
+    fetched = client.get("/api/goals")
     assert fetched.status_code == 200, fetched.text
     saved_goal = fetched.json()["goals"][0]
     assert saved_goal["protein"] == 20
@@ -220,10 +230,9 @@ def test_goal_change_invalid_goal_input_returns_422(api_client):
 
 def test_goal_update_invalid_user_id_returns_404(api_client):
     client, _ = api_client
-    fake_user_id = uuid.uuid4()
 
     response = client.put(
-        f"/api/goals/{fake_user_id}",
+        "/api/goals",
         json=make_goal_payload(),
     )
 
@@ -233,9 +242,8 @@ def test_goal_update_invalid_user_id_returns_404(api_client):
 
 def test_goal_get_invalid_user_id_returns_404(api_client):
     client, _ = api_client
-    fake_user_id = uuid.uuid4()
 
-    response = client.get(f"/api/goals/{fake_user_id}")
+    response = client.get("/api/goals")
 
     assert response.status_code == 404, response.text
     assert response.json()["detail"] == "User not found"
@@ -262,7 +270,7 @@ def test_goal_view_valid_user_id_returns_200(api_client):
         )
         session.commit()
 
-    response = client.get(f"/api/goals/{user_id}")
+    response = client.get("/api/goals")
 
     assert response.status_code == 200, response.text
     goals = response.json()["goals"]

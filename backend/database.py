@@ -46,6 +46,7 @@ class Meals(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(index=True)
     consumed_at: Mapped[datetime] = mapped_column(index=True, default=datetime.now())
     food_name: Mapped[str] = mapped_column()
+    meal_type: Mapped[str | None] = mapped_column(default=None)
     calories: Mapped[float] = mapped_column()
     protein: Mapped[float] = mapped_column()
     carbs: Mapped[float] = mapped_column()

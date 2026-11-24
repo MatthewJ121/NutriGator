@@ -5,10 +5,9 @@ import GoalsDashboard from "./GoalsDashboard";
 import FoodLog from "./FoodLog";
 import { addUpMeals } from "../utils/nutrition";
 import SignUp from "./SignUp";
-import { loginUser } from "../api/auth";
+import { loginUser, logoutUser } from "../api/auth";
 import { getLocalUserId } from "../utils/userId";
 
-const ENABLE_DEMO_LOGIN = import.meta.env.DEV;
 
 function Login({ onLogin, onCreateAccount }) {
   const [email, setEmail] = useState("");
@@ -50,16 +49,6 @@ function Login({ onLogin, onCreateAccount }) {
       );
       setLoading(false);
     }
-  };
-
-  const handleDemoLogin = () => {
-    onLogin({
-      email: "demo@nutrigator.local",
-      name: "Demo",
-      userId: null,
-      token: null,
-      isDemo: true,
-    });
   };
 
   return (
@@ -128,16 +117,6 @@ function Login({ onLogin, onCreateAccount }) {
             Create Account
           </button>
 
-          {ENABLE_DEMO_LOGIN && (
-            <button
-              type="button"
-              className="form-button"
-              onClick={handleDemoLogin}
-              disabled={loading}
-            >
-              Demo Login (Frontend Testing)
-            </button>
-          )}
         </form>
       </div>
     </div>
@@ -145,7 +124,6 @@ function Login({ onLogin, onCreateAccount }) {
 }
 
 function Home({ user, onLogout }) {
-  const [meals, setMeals] = useState([]);
 
   return (
     <div className="nutrigator-shell">
@@ -183,28 +161,20 @@ function Home({ user, onLogout }) {
       </header>
 
       <main className="nutrigator-content">
-        {user.isDemo && (
-          <p
-            style={{
-              textAlign: "center",
-              fontSize: "13px",
-              color: "#555",
-            }}
-          >
-            Demo Mode — Frontend Testing Only
-          </p>
-        )}
-
-        <GoalsDashboard
-          userId={user.userId}
-          isDemo={user.isDemo}
-          totals={addUpMeals(meals)}
-        />
-
         <FoodLog
           userId={user.userId}
           isDemo={user.isDemo}
-          onMealsChange={setMeals}
+          renderSummary={(meals, selectedDate) => (
+            <GoalsDashboard
+              key={selectedDate}
+              selectedDate={selectedDate}
+              onUnauthorized={onLogout}
+              userId={user.userId}
+              isDemo={user.isDemo}
+              totals={addUpMeals(meals)}
+            />
+          )}
+          onUnauthorized={onLogout}
         />
       </main>
 
@@ -222,14 +192,26 @@ export default function NutriGatorApp() {
   const [user, setUser] = useState(null);
   const [screen, setScreen] = useState("login");
 
+  const handleLogout = async () => {
+    setUser(null);
+    setScreen("login");
+
+    try {
+      await logoutUser();
+    } catch (error) {
+      alert(
+        error instanceof Error
+          ? `You were logged out locally, but server logout may have failed: ${error.message}`
+          : "You were logged out locally, but server logout may have failed."
+      );
+    }
+  };
+
   if (user) {
     return (
       <Home
         user={user}
-        onLogout={() => {
-          setUser(null);
-          setScreen("login");
-        }}
+        onLogout={handleLogout}
       />
     );
   }

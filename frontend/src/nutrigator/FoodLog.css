@@ -1,165 +1,487 @@
+.foodLog { max-width: 920px; margin: 28px auto; padding: 18px; border: 2px solid #111; border-radius: 14px; background: white; color: #1b3554; }
+.logDateBar { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin-bottom: 18px; }
+.logDateTitle { text-align: center; font-size: 1.1rem; margin: 0; }
+.foodLogHeader, .flButtons { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.flButtons { justify-content: flex-end; }
+.foodLogHeader h3 { margin: 0; }
+.flButton, .logDateBtn { border: 2px solid #1b3554; border-radius: 8px; padding: 9px 14px; background: white; color: #1b3554; cursor: pointer; font: inherit; font-weight: 700; }
+.flPrimary { background: #2b67aa; color: white; }
+.foodLog button:disabled { opacity: .45; cursor: default; }
+.foodLog button:focus-visible, .foodLog input:focus-visible, .foodLog select:focus-visible { outline: 3px solid #ed9b32; outline-offset: 2px; }
+.foodLogForm { margin: 16px 0; padding: 16px; background: #f3f6fa; border: 1px solid #bfcbd9; border-radius: 12px; }
+.foodLogForm label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 700; }
+.foodLogForm input, .foodLogForm select { box-sizing: border-box; width: 100%; min-width: 0; padding: 9px; border: 1px solid #697c92; border-radius: 6px; background: white; font: inherit; }
+.foodLogGrid, .foodSearchRow, .foodLogEditDateTime { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 12px 0; }
+.foodSearchRow { grid-template-columns: 2fr 1fr 1fr; }
+.foodLogHint, .foodLogTime { font-size: 13px; color: #4a5d75; }
+.foodLogHint { margin-top: 16px; }
+.foodLogLayout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+.foodLogList, .foodSearchResults { list-style: none; padding: 0; margin: 0; max-height: 420px; overflow-y: auto; }
+.foodLogList li, .foodSearchResults li { margin-bottom: 8px; }
+.foodLogMealButton, .foodSearchOption { width: 100%; text-align: left; background: white; color: inherit; padding: 12px; border: 1px solid #bccbdd; border-radius: 8px; cursor: pointer; overflow-wrap: anywhere; }
+.foodLogMealButton.selected { background: #eaf2ff; border: 2px solid #2b67aa; }
+.foodLogName { font-size: 16px; font-weight: 800; margin-bottom: 4px; }
+.foodLogNumbers { font-size: 13px; margin-top: 8px; line-height: 1.6; }
+.foodLogDetails { padding: 14px; background: #f9fbff; border: 1px solid #bccbdd; border-radius: 10px; align-self: start; }
+.foodLogDetails h4 { margin: 0; }
+.foodLogDetailsGrid { display: grid; gap: 8px; margin: 16px 0; }
+.foodLogDetailsRow { display: flex; justify-content: space-between; gap: 12px; }
+.foodSearchOption { display: flex; flex-direction: column; gap: 6px; }
+.foodSearchResults { max-height: 260px; margin-bottom: 12px; }
+.logError { color: #b42318; }
+@media (max-width: 650px) { .foodLogLayout, .foodSearchRow { grid-template-columns: 1fr; } .logDateBtn { padding: 6px; font-size: 13px; } .logDateTitle { font-size: 14px; } }
 
-.foodLog {
-  max-width: 920px;
-  min-height: 220px;
-  margin: 38px auto 0;
-  padding: 18px;
-  border: 2px solid #111111;
-  border-radius: 12px;
-  background: #ffffff;
+/* Meal layout from your previous project. */
+.logPage {
+  padding: 0 0 10px;
 }
 
-.foodLogHeader {
+.logContent {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.logDateBar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  margin: 6px 0 10px;
+  flex-wrap: wrap;
 }
 
-.foodLogHeader h3 {
+.logDateTitle {
   margin: 0;
+  font-size: 1.1rem;
   color: #1b3554;
-  font-size: 20px;
-  font-weight: 900;
+  font-weight: 1000;
 }
 
-.foodLogForm {
-  margin-top: 14px;
-  padding: 16px;
-  background: #eceef2;
-  border: 2px solid #bfc1c5;
-  border-radius: 14px;
-}
-
-.foodLogTopRow {
-  display: grid;
-  grid-template-columns: 1fr 160px;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.foodLogGrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.foodLogForm label {
+.logDateActions {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
+  align-items: center;
+  gap: 10px;
+}
+
+.logDateBtn {
+  border: none;
+  background: #f0f0f0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
   font-weight: 800;
   color: #1b3554;
 }
 
-.foodLogForm input {
-  width: 100%;
-  height: 40px;
-  border: 2px solid #111111;
-  border-radius: 8px;
-  padding: 6px 8px;
-  font-size: 15px;
-  font-family: inherit;
-  background: #ffffff;
-}
-
-.foodLogEmpty {
-  color: #4a5d75;
-  font-weight: 700;
-}
-
-.foodLogList {
-  list-style: none;
-  margin: 14px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.foodLogList li {
-  border: 2px solid rgba(0, 0, 0, 0.1);
-  border-radius: 10px;
-  padding: 10px 12px;
-}
-
-.foodLogName {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
+.logTodayBtn {
+  border: none;
+  background: transparent;
+  color: #0066cc;
   font-weight: 900;
-  color: #1b3554;
-}
-
-.foodLogTime {
-  font-weight: 700;
-  color: #4a5d75;
-  font-size: 13px;
-}
-
-.foodLogNumbers {
-  margin-top: 4px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #4a5d75;
-}
-
-@media (max-width: 700px) {
-  .foodLog {
-    margin-top: 24px;
-  }
-
-  .foodLogGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 420px) {
-  .foodLogTopRow {
-    grid-template-columns: 1fr;
-  }
-}
-
-.flButtons {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.flButton {
-  border: 2px solid #111111;
-  border-radius: 9px;
-  background: #ffffff;
-  color: #1b3554;
-  padding: 9px 15px;
-  font-size: 14px;
-  font-weight: 900;
-  font-family: inherit;
   cursor: pointer;
 }
 
-.flButton:hover {
-  background: #eaf2ff;
+.logResetRow {
+  text-align: right;
+  margin-bottom: 10px;
 }
 
-.flPrimary {
-  background: #2b67aa;
-  color: #ffffff;
+.logResetBtn {
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 800;
 }
 
-.flPrimary:hover {
-  background: #23558d;
+/* MAIN LOG CARD */
+
+.logCard {
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 14px 10px;
+  background: var(--surface);
 }
 
-.foodLogForm .foodLogFoodField {
-  margin-bottom: 4px;
+.logSection {
+  padding: 12px 0;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-.foodLogHint {
-  margin: 0 0 12px;
-  font-size: 12px;
+.logSection:last-of-type {
+  border-bottom: none;
+}
+
+.logSectionTitle {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: 900;
+  color: #1b3554;
+}
+
+.logAddRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.logAddBtn {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: #e2e8f0;
+  color: #1b3554;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logAddBtn:hover {
+  background: #cbd5e1;
+}
+
+.logAddPrompt {
   font-weight: 700;
-  color: #4a5d75;
+  color: #1b3554;
+  cursor: pointer;
+  user-select: none;
 }
+
+.logInputRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.logInput {
+  flex: 1;
+  min-width: 0;
+  border: 3px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 16px;
+  outline: none;
+}
+
+.logSearchWrap {
+  position: relative;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.logSearchLoading {
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.logSearchDropdown {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.logSearchDropdownItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.logSearchDropdownItem:last-child {
+  border-bottom: none;
+}
+
+.logSearchDropdownItem:hover {
+  background: #f1f5f9;
+}
+
+.logSearchDropdownCals {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+/* MODAL */
+
+.logModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.logModal {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  max-width: 400px;
+  width: 100%;
+}
+
+.logModalTitle {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 900;
+  color: #1b3554;
+  line-height: 1.3;
+}
+
+.logModalNutrients {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.logModalNutrientRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-weight: 700;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.logModalServing {
+  margin-bottom: 16px;
+}
+
+.logModalServingLabel {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 900;
+  color: #1b3554;
+  font-size: 14px;
+}
+
+.logModalServingSelect {
+  width: 100%;
+  border: 3px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  outline: none;
+}
+
+.logModalActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.logModalCancel {
+  padding: 10px 18px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  background: #fff;
+  color: #1b3554;
+}
+
+.logModalAdd {
+  padding: 10px 18px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  background: #1b3554;
+  color: #fff;
+}
+
+.logItemList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.logItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  font-weight: 700;
+  color: var(--text);
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.logItem:last-child {
+  border-bottom: none;
+}
+
+.logItemName {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.logItemMeta {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.logItemRemove {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logEmptyState {
+  margin-top: 10px;
+  padding: 10px 0;
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.logEmptyState strong {
+  color: #1b3554;
+}
+
+.logExpand {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: all 0.35s ease;
+}
+
+.logExpand.open {
+  max-height: 500px;
+  opacity: 1;
+}
+
+.logItemAnim {
+  animation: logItemFade 0.3s ease;
+}
+
+@keyframes logItemFade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.logContent {
+  transition: opacity 0.2s ease;
+}
+
+.fadeOut {
+  opacity: 0;
+}
+
+.fadeIn {
+  opacity: 1;
+}
+.foodLog.logPage { padding: 0 0 10px; border: 0; background: transparent; max-width: 860px; }
+.logPage { --border: #111; --surface: #fff; --text: #1b3554; --muted: #5b6f86; --radius-md: 14px; --radius-lg: 20px; }
+.logDateBar { flex-wrap: nowrap; }
+.logDateTitle { text-align: center; }
+.logDateTitle small { display: block; font-size: 11px; color: var(--muted); margin-top: 4px; }
+.logAddPrompt { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; text-align: left; }
+.logItemName { border: 0; background: none; padding: 4px 0; text-align: left; color: inherit; font: inherit; cursor: pointer; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.logItemName time { color: var(--muted); font-size: 12px; flex-shrink: 0; }
+.logItemList { max-height: 300px; overflow-y: auto; }
+.logSearchWrap .logInput { width: 100%; }
+.logSearchDropdownItem { width: 100%; text-align: left; background: none; border: 0; font: inherit; }
+.logSearchDropdownItem small { display: block; font-size: 11px; font-weight: 500; }
+.logSearchAmounts { display: flex; gap: 12px; }
+.logSearchAmounts label, .logModalServing label { display: grid; gap: 6px; font-size: 13px; font-weight: 700; }
+.logSearchAmounts input, .logSearchAmounts select, .logModalServing input { width: 100%; padding: 8px; border: 2px solid var(--border); border-radius: 8px; font: inherit; }
+.logModal { max-width: 520px; max-height: 85vh; overflow-y: auto; }
+.logModalServing { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.foodLogForm.logModal { margin: 0; background: white; }
+.logExpand.open { max-height: none; }
+@media (max-width: 600px) { .logDateActions { width: auto; } .logDateBar { align-items: center; } .logDateTitle { font-size: 14px; } .logItemName { flex-wrap: wrap; } }
+@media (prefers-reduced-motion: reduce) { .logItemAnim { animation: none; } .logExpand, .logContent { transition: none; } }
+
+/* Compact type-ahead and serving dialog, matching the reference. */
+.logSearchWrap { margin: 8px 0; }
+.logSearchWrap .logInput { display: block; width: 210px; max-width: 100%; min-height: 44px; border: 3px solid #151515; border-radius: 10px; padding: 9px 12px; font-size: 16px; color: #172033; background: #fff; }
+.logSearchDropdown { margin-top: 8px; max-height: 220px; border: 2px solid #151515; border-radius: 10px; }
+.logSearchDropdownItem { min-height: 40px; padding: 9px 12px; color: #172033; font-weight: 750; font-size: 15px; }
+.logSearchDropdown li + li { border-top: 1px solid #edf0f4; }
+.logSearchDropdown li:first-child, .logSearchDropdownItem:hover, .logSearchDropdownItem:focus-visible { background: #f0f4f8; }
+.logSearchDropdownItem small { display: none; }
+.logSearchDropdownCals { font-size: 14px; color: #64748b; }
+.logManualLink { border: 0; background: none; color: #3e5c78; font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; padding: 8px 0; }
+.foodLogForm.logModal { max-width: 400px; padding: 20px; border: 2px solid #151515; border-radius: 14px; box-shadow: none; }
+.logModalTitle { font-size: 18px; margin: 0 0 16px; font-weight: 900; }
+.logModalNutrients { gap: 8px; margin-bottom: 18px; }
+.logModalNutrientRow { font-size: 15px; font-weight: 750; color: #172033; }
+.foodLogForm .logModalServingLabel { display: grid; gap: 7px; font-size: 14px; }
+.logModalServingSelect { border: 3px solid #151515; border-radius: 10px; min-height: 44px; padding: 9px 12px; font-size: 15px; font-weight: 700; background: #fff; color: #172033; width: 100%; }
+.logModalActions { margin-top: 14px; gap: 10px; }
+.logModalCancel, .logModalAdd { padding: 10px 18px; border: 2px solid #151515; border-radius: 9px; font-size: 15px; font-weight: 800; }
+.logModalAdd { background: #1b3854; }
+.foodLogForm .logModalServingSelect { border: 3px solid #151515; border-radius: 10px; padding: 9px 12px; }
+
+/* Keep the meal sections compact, like the reference log. */
+.logCard { padding: 12px 14px 8px; }
+.logSection { padding: 10px 0; }
+.logSectionTitle { margin-bottom: 8px; }
+.logAddRow { margin-bottom: 6px; }
+.logEmptyState { margin-top: 6px; padding: 7px 0; }
+.logDateTitle small { font-size: 12px; font-weight: 700; }
+
+.logDateBar.logDateBarTop {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 10px 12px;
+  margin: 0 0 16px;
+  background: #fff;
+  border: 1px solid #e5e9ef;
+  border-radius: 10px;
+}
+.logDateBarTop > .logDateBtn { justify-self: start; }
+.logDateBarTop .logDateActions { justify-self: end; }
+.logSummary { margin-bottom: 14px; }
+@media (max-width: 480px) { .logDateBar.logDateBarTop { padding: 8px; gap: 6px; } .logDateBarTop .logDateActions { gap: 4px; } }
