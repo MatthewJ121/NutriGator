@@ -12,10 +12,11 @@ Endpoints:
 """
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy.exc import OperationalError
 from starlette.responses import JSONResponse
 
 import database
-from routers.auth_helpers import DB, auth_request, copy_session_cookie, local_user_id, upstream_cookies, clear_session_cookies
+from routers.auth_helpers import DB, auth_request, copy_session_cookie, local_user_id, upstream_cookies, clear_session_cookies, require_active_profile
 
 auth_router = APIRouter(prefix="/api/profiles/auth", tags=["Authentication"])
 password_router = APIRouter(prefix="/api/profiles/password", tags=["Password Management"])
@@ -88,7 +89,7 @@ async def register(body: RegisterRequest, response: Response, request: Request, 
 
 
 @auth_router.post("/login")
-async def login(body: LoginRequest, request: Request, response: Response):
+async def login(body: LoginRequest, request: Request, response: Response, db: DB):
     """
     Authenticate a user and create a session.
 
@@ -107,8 +108,20 @@ async def login(body: LoginRequest, request: Request, response: Response):
     upstream, data = await auth_request("POST", "sign-in/email", payload={
         "email": str(body.email), "password": body.password,
     })
+    user = data.get("user") if isinstance(data, dict) else None
+    auth_id = user.get("id") if isinstance(user, dict) else None
+
+    if not auth_id:
+        raise HTTPException(502, "Authentication service did not return a user ID")
+    try:
+        require_active_profile(local_user_id(str(auth_id)), db)
+    except OperationalError as exc:
+        raise HTTPException(
+            503, "Profile database is unavailable; login could not be completed"
+        ) from exc
+
     copy_session_cookie(upstream, response, request)
-    return {"user": data.get("user"), "token": data.get("token")}
+    return {"user": user, "token": data.get("token")}
 
 
 @auth_router.post("/logout")

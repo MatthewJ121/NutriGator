@@ -11,6 +11,7 @@ import httpx
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import OperationalError
 
 import main
 import routers.profiles as profiles
@@ -135,3 +136,26 @@ def test_https_cookie_remains_secure_and_host_scoped():
     assert cookie.startswith("__Secure-neon-auth.session_token=")
     assert "Secure" in cookie and "HttpOnly" in cookie
     assert "SameSite=lax" in cookie and "Domain=" not in cookie
+
+
+def test_login_returns_service_unavailable_when_profile_database_is_down(monkeypatch):
+    async def fake_auth_request(method, route, *, payload=None, cookies=None):
+        assert method == "POST" and route == "sign-in/email"
+        return httpx.Response(200), {"user": {"id": "test-auth-user"}}
+
+    def unavailable_profile(user_id, db):
+        raise OperationalError("SELECT profile", {}, OSError("database unavailable"))
+
+    monkeypatch.setattr(profiles, "auth_request", fake_auth_request)
+    monkeypatch.setattr(profiles, "require_active_profile", unavailable_profile)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/api/profiles/auth/login",
+            json={"email": "user@example.com", "password": "valid-password"},
+        )
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": "Profile database is unavailable; login could not be completed"
+    }

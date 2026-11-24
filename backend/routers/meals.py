@@ -162,6 +162,7 @@ def delete_meal(target_meal_id: int, user_id: UserId, db: DB):
         HTTPException(404): Meal does not exist.  
         HTTPException(500): Database deletion failed.
     """
+    require_active_profile(user_id, db)
     delete_owned_meal(target_meal_id, user_id, db)
 
 
@@ -179,6 +180,7 @@ def delete_meal_body(body: MealDeleteRequest, user_id: UserId, db: DB):
     Raises:
         HTTPException: Uses the same 401/403/404/500 contract as delete_meal.
     """
+    require_active_profile(user_id, db)
     delete_owned_meal(body.meal_id, user_id, db)
 
 
@@ -248,6 +250,7 @@ def add_meal(body: MealRequest, user_id: UserId, db: DB):
 
 @legacy_router.get("/meals/today")
 def todays_meals(user_id: UserId, db: DB):
+    require_active_profile(user_id, db)
     start, end = utc_day()
     meals = db.scalars(
         select(database.Meals).where(
@@ -261,6 +264,7 @@ def todays_meals(user_id: UserId, db: DB):
 
 @legacy_router.get("/progress/today")
 def today_progress(user_id: UserId, db: DB):
+    require_active_profile(user_id, db)
     start, end = utc_day()
     return calculate_progress(start, end, start.date(), user_id, db)
 
@@ -356,4 +360,4 @@ def meal_history(user_id: UserId, db: DB):
         HTTPException(403): Inactive user.  
         HTTPException(500): The database read failed.
 """
-    raise HTTPException(501) 
+    raise HTTPException(501)
