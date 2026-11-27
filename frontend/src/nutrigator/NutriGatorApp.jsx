@@ -5,6 +5,7 @@ import GoalsDashboard from "./GoalsDashboard";
 import FoodLog from "./FoodLog";
 import { addUpMeals } from "../utils/nutrition";
 import SignUp from "./SignUp";
+import AccountSettings from "./AccountSettings";
 import { loginUser, logoutUser } from "../api/auth";
 import { getLocalUserId } from "../utils/userId";
 
@@ -124,6 +125,7 @@ function Login({ onLogin, onCreateAccount }) {
 }
 
 function Home({ user, onLogout }) {
+  const [showSettings, setShowSettings] = useState(false);
 
   return (
     <div className="nutrigator-shell">
@@ -131,6 +133,9 @@ function Home({ user, onLogout }) {
         <button
           type="button"
           className="nutrigator-account"
+          aria-label="Account settings"
+          aria-pressed={showSettings}
+          onClick={() => setShowSettings(true)}
           title={user.email}
         >
           <svg
@@ -161,6 +166,8 @@ function Home({ user, onLogout }) {
       </header>
 
       <main className="nutrigator-content">
+        {showSettings && <AccountSettings onBack={() => setShowSettings(false)} />}
+        <div hidden={showSettings}>
         <FoodLog
           userId={user.userId}
           isDemo={user.isDemo}
@@ -176,13 +183,14 @@ function Home({ user, onLogout }) {
           )}
           onUnauthorized={onLogout}
         />
+        </div>
       </main>
 
       <nav
         className="nutrigator-bottom-nav"
         aria-label="Main navigation"
       >
-        <span>log</span>
+        <button type="button" className="account-log-link" onClick={() => setShowSettings(false)}>log</button>
       </nav>
     </div>
   );
