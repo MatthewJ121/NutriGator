@@ -1,0 +1,98 @@
+.account-settings {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 0 10px;
+  font-family: var(--font-sans);
+  color: #1b3554;
+}
+
+.account-settings h1 {
+  margin: 22px 0 16px;
+  font-size: 24px;
+  font-weight: 1000;
+  line-height: 1.25;
+}
+
+.account-settings h1:focus { outline: none; }
+
+.account-back,
+.account-sections a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: #1b3554;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.4;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.account-back:hover,
+.account-sections a:hover { background: #f6fbff; }
+
+.account-sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.account-settings-card {
+  padding: 14px 14px 10px;
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.account-setting {
+  padding: 12px 0;
+  border-bottom: 1px solid #e2e8f0;
+  scroll-margin-top: 20px;
+}
+
+.account-setting:last-child { border-bottom: none; }
+
+.account-setting h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.account-setting p {
+  margin: 6px 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.account-setting .account-unavailable {
+  color: #4a5d75;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.account-settings :is(a, button):focus-visible {
+  outline: 3px solid #ed9b32;
+  outline-offset: 2px;
+}
+
+.nutrigator-bottom-nav .account-log-link {
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 520px) {
+  .account-settings h1 { font-size: 22px; }
+  .account-sections { gap: 8px; }
+}

@@ -275,3 +275,23 @@ test('a historical day inherits only earlier goals and creates its own effective
   expect(state.goals.find(row => row.effective_date === TODAY).calories).toBe(2400);
   expect(state.goals.find(row => row.effective_date === YESTERDAY).calories).toBe(1700);
 });
+
+test('profile opens account settings and section navigation without API calls', async ({page}) => {
+  const state = await setup(page);
+  const before = state.requests.length;
+  await page.getByRole('button',{name:'Account settings',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Account settings',exact:true})).toBeFocused();
+  for (const name of ['Password','Premium','Delete account']) {
+    await page.getByRole('link',{name,exact:true}).click();
+    await expect(page.getByRole('heading',{name,exact:true})).toBeVisible();
+  }
+  expect(state.requests.length).toBe(before);
+  await page.getByRole('button',{name:'Back to food log'}).click();
+  await expect(page.getByRole('button',{name:'Log breakfast',exact:true})).toBeVisible();
+  await expect(page.locator('.logItemName')).toHaveText([/Early breakfast/,/Later breakfast/]);
+  await page.getByRole('button',{name:'Account settings',exact:true}).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading',{name:'Account settings',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'log',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Log breakfast',exact:true})).toBeVisible();
+});
