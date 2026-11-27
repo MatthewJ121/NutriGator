@@ -39,6 +39,15 @@ class PasswordUpdateRequest(BaseModel):
     new: str = Field(min_length=7, max_length=128)
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=1)
+    newPassword: str = Field(min_length=8, max_length=128)
+
+
 '''Authenticaation Endpoints'''
 
 @auth_router.post("/register", status_code=201)
@@ -178,36 +187,59 @@ async def delete_account(password: str, request: Request, response: Response, db
 '''Password Endpoints'''
 
 @password_router.post("/forgot")
-async def forgot_password(email: EmailStr, request: Request, response: Response):
+async def forgot_password(body: ForgotPasswordRequest, request: Request, response: Response):
     """
     Send the user a password reset link to their email if it exists using BetterAuth `requestResetRequest`.
 
     No error status will ever be returned if the email does not exist or fails to send. 
 
     Parameters:  
-        email (str): Email included in request body to attempt to send a reset link to.
+        body (ForgotPasswordRequest): Email to attempt to send a reset link to.
 
     Returns:  
         None.
+
+    Raises:
+        HTTPException(502): The authentication service is unavailable or returns invalid data.
 """
-    raise HTTPException(501) # implemented in #56
+    try:
+        await auth_request(
+            "POST",
+            "request-password-reset",
+            payload={"email": str(body.email)},
+        )
+    except HTTPException as exc:
+        if 400 <= exc.status_code < 500:
+            return None
+        raise
+    return None
+
 
 @password_router.post("/reset")
-async def reset_password(token: str, newPassword: str, request: Request, response: Response):
+async def reset_password(body: ResetPasswordRequest, request: Request, response: Response):
     """
     Update the user's password during a reset using BetterAuth `resetPassword`.
 
     Parameters:  
-        token (str): Token included in the reset link.        
-        newPassword (str): The new password to be reset to.
+        body (ResetPasswordRequest): Reset token and new password.
 
     Returns:  
         None.
 
     Raises:  
-        HTTPException(401): Invalid session.
+        HTTPException(400): The reset token is invalid or expired.  
+        HTTPException(422): The new password does not meet password requirements.  
+        HTTPException(502): The authentication service is unavailable or returns invalid data.
 """
-    raise HTTPException(501) # implemented in #56
+    await auth_request(
+        "POST",
+        "reset-password",
+        payload={
+            "token": body.token,
+            "newPassword": body.newPassword,
+        },
+    )
+    return None
 
 
 @password_router.post("/update")

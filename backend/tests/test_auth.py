@@ -187,3 +187,120 @@ def test_login_returns_service_unavailable_when_profile_database_is_down(monkeyp
     assert response.json() == {
         "detail": "Profile database is unavailable; login could not be completed"
     }
+
+
+def test_forgot_password_requests_reset_link(monkeypatch):
+    captured = {}
+
+    async def fake_auth_request(method, route, *, payload=None, cookies=None):
+        captured.update(method=method, route=route, payload=payload)
+        return httpx.Response(200), {"status": True}
+
+    monkeypatch.setattr(profiles, "auth_request", fake_auth_request)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/api/profiles/password/forgot",
+            json={"email": "user@example.com"},
+        )
+
+    assert response.status_code == 200
+    assert response.json() is None
+    assert captured == {
+        "method": "POST",
+        "route": "request-password-reset",
+        "payload": {"email": "user@example.com"},
+    }
+
+
+def test_forgot_password_hides_auth_client_errors(monkeypatch):
+    async def fake_auth_request(method, route, *, payload=None, cookies=None):
+        raise HTTPException(404, "User not found")
+
+    monkeypatch.setattr(profiles, "auth_request", fake_auth_request)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/api/profiles/password/forgot",
+            json={"email": "missing@example.com"},
+        )
+
+    assert response.status_code == 200
+    assert response.json() is None
+
+
+def test_forgot_password_returns_service_error(monkeypatch):
+    async def fake_auth_request(method, route, *, payload=None, cookies=None):
+        raise HTTPException(502, "Authentication service is unavailable")
+
+    monkeypatch.setattr(profiles, "auth_request", fake_auth_request)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/api/profiles/password/forgot",
+            json={"email": "user@example.com"},
+        )
+
+    assert response.status_code == 502
+    assert response.json() == {
+        "detail": "Authentication service is unavailable"
+    }
+
+
+def test_reset_password_calls_auth_service(monkeypatch):
+    captured = {}
+
+    async def fake_auth_request(method, route, *, payload=None, cookies=None):
+        captured.update(method=method, route=route, payload=payload)
+        return httpx.Response(200), {"status": True}
+
+    monkeypatch.setattr(profiles, "auth_request", fake_auth_request)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/api/profiles/password/reset",
+            json={
+                "token": "valid-reset-token",
+                "newPassword": "new-password",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() is None
+    assert captured == {
+        "method": "POST",
+        "route": "reset-password",
+        "payload": {
+            "token": "valid-reset-token",
+            "newPassword": "new-password",
+        },
+    }
+
+
+@pytest.mark.parametrize(
+    "status_code,detail",
+    [
+        (400, "Invalid or expired reset token"),
+        (422, "Password does not meet requirements"),
+        (502, "Authentication service is unavailable"),
+    ],
+)
+def test_reset_password_propagates_auth_errors(
+    monkeypatch, status_code, detail
+):
+    async def fake_auth_request(method, route, *, payload=None, cookies=None):
+        raise HTTPException(status_code, detail)
+
+    monkeypatch.setattr(profiles, "auth_request", fake_auth_request)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/api/profiles/password/reset",
+            json={
+                "token": "reset-token",
+                "newPassword": "new-password",
+            },
+        )
+
+    assert response.status_code == status_code
+    assert response.json() == {"detail": detail}
