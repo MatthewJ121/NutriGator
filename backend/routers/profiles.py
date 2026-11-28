@@ -16,7 +16,7 @@ from sqlalchemy.exc import OperationalError
 from starlette.responses import JSONResponse
 
 import database
-from routers.auth_helpers import DB, auth_request, copy_session_cookie, local_user_id, upstream_cookies, clear_session_cookies, require_active_profile
+from routers.auth_helpers import DB, UserId, auth_request, copy_session_cookie, local_user_id, upstream_cookies, clear_session_cookies, require_active_profile
 
 auth_router = APIRouter(prefix="/api/profiles/auth", tags=["Authentication"])
 password_router = APIRouter(prefix="/api/profiles/password", tags=["Password Management"])
@@ -25,7 +25,7 @@ password_router = APIRouter(prefix="/api/profiles/password", tags=["Password Man
 class RegisterRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     email: EmailStr
-    password: str = Field(min_length=8, max_length=128)
+    password: str = Field(min_length=7, max_length=128)
 
 
 class LoginRequest(BaseModel):
@@ -45,7 +45,7 @@ class ForgotPasswordRequest(BaseModel):
 
 class ResetPasswordRequest(BaseModel):
     token: str = Field(min_length=1)
-    newPassword: str = Field(min_length=8, max_length=128)
+    newPassword: str = Field(min_length=7, max_length=128)
 
 
 '''Authenticaation Endpoints'''
@@ -243,23 +243,41 @@ async def reset_password(body: ResetPasswordRequest, request: Request, response:
 
 
 @password_router.post("/update")
-async def update_password(body: PasswordUpdateRequest, request: Request, response: Response):
+async def update_password(body: PasswordUpdateRequest, request: Request, user_id: UserId, db: DB):
     """
     Update the password of a logged-in user.
 
     The user can update their password using their current password when logged-in. 
 
     Parameters:  
-        current1 (str): Confirmation of existing password from field 1  
-        current2 (str): Confirmation of existing password from field 2  
-        new (str): New password to change to
+        body (PasswordUpdateRequest): Current password confirmations and new password.
 
     Returns:  
         None.
 
     Raises:  
-        HTTPException(401): Invalid session  
-        HTTPException(403): The current password is incorrect  
-        HTTPException(422): The new password does not meet password requirements (#57)
+        HTTPException(401): No valid session is provided.  
+        HTTPException(403): The account is inactive or the current password is incorrect.  
+        HTTPException(404): The local user profile does not exist.  
+        HTTPException(422): The current password confirmations differ or the new password is invalid.  
+        HTTPException(502): The authentication service is unavailable or returns invalid data.
 """
-    raise HTTPException(501) # implemented in #56
+    if body.current1 != body.current2:
+        raise HTTPException(422, "Current password confirmations do not match")
+
+    cookies = upstream_cookies(request.cookies)
+    if not cookies:
+        raise HTTPException(401, "Please log in first")
+
+    require_active_profile(user_id, db)
+
+    await auth_request(
+        "POST",
+        "change-password",
+        payload={
+            "currentPassword": body.current1,
+            "newPassword": body.new,
+        },
+        cookies=cookies,
+    )
+    return None

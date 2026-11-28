@@ -148,6 +148,69 @@ def test_inactive_profile_is_rejected_by_data_routes(api_client, method, path, b
     assert response.json()["detail"] == "This account is not active"
 
 
+def test_inactive_profile_cannot_update_password(api_client, monkeypatch):
+    client, sessions = api_client
+    with sessions() as session:
+        session.get(database.Profiles, USER_ID).is_active = False
+        session.commit()
+
+    async def unexpected_auth_request(method, route, *, payload=None, cookies=None):
+        pytest.fail("Authentication service should not be called")
+
+    monkeypatch.setattr(profiles, "auth_request", unexpected_auth_request)
+
+    response = client.post(
+        "/api/profiles/password/update",
+        cookies={"better-auth.session_token": "session-value"},
+        json={
+            "current1": "old-password",
+            "current2": "old-password",
+            "new": "new-password",
+        },
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "This account is not active"
+
+
+def test_active_profile_can_update_password(api_client, monkeypatch):
+    client, _ = api_client
+    captured = {}
+
+    async def successful_auth_request(method, route, *, payload=None, cookies=None):
+        captured.update(
+            method=method,
+            route=route,
+            payload=payload,
+            cookies=dict(cookies or {}),
+        )
+        return httpx.Response(200), {"status": True}
+
+    monkeypatch.setattr(profiles, "auth_request", successful_auth_request)
+
+    response = client.post(
+        "/api/profiles/password/update",
+        cookies={"better-auth.session_token": "session-value"},
+        json={
+            "current1": "old-password",
+            "current2": "old-password",
+            "new": "new-password",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() is None
+    assert captured == {
+        "method": "POST",
+        "route": "change-password",
+        "payload": {
+            "currentPassword": "old-password",
+            "newPassword": "new-password",
+        },
+        "cookies": {"better-auth.session_token": "session-value"},
+    }
+
+
 def test_authenticated_reads_and_writes_are_scoped_to_session_user(api_client):
     client, sessions = api_client
     today = date.today()
