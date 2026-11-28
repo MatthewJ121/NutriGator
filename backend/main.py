@@ -20,6 +20,7 @@ allowed_origins = [
 app.include_router(goals.router)
 app.include_router(profiles.auth_router)
 app.include_router(profiles.password_router)
+app.include_router(profiles.premium_router)
 app.include_router(externals.router)
 app.include_router(meals.router)
 app.include_router(meals.progress_router)

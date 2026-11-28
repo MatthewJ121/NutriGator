@@ -12,14 +12,19 @@ Endpoints:
 """
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from starlette.responses import JSONResponse
 
 import database
-from routers.auth_helpers import DB, auth_request, copy_session_cookie, local_user_id, upstream_cookies, clear_session_cookies, require_active_profile
+from routers.auth_helpers import DB, auth_request, copy_session_cookie, local_user_id, upstream_cookies, clear_session_cookies, require_active_profile, UserId
 
 auth_router = APIRouter(prefix="/api/profiles/auth", tags=["Authentication"])
 password_router = APIRouter(prefix="/api/profiles/password", tags=["Password Management"])
+premium_router = APIRouter(prefix="/api/profiles", tags=["Premium Management"])
+
+
+class PremiumRequest(BaseModel):
+    state: bool = Field(strict=True)
 
 
 class RegisterRequest(BaseModel):
@@ -37,6 +42,66 @@ class PasswordUpdateRequest(BaseModel):
     current1: str = Field(min_length=7, max_length=128)
     current2: str = Field(min_length=7, max_length=128)
     new: str = Field(min_length=7, max_length=128)
+
+
+@premium_router.get("/premium")
+def get_premium(user_id: UserId, db: DB):
+    """Get the premium status of the currently logged-in user.
+
+    Returns:
+        dict: Current premium status under the status field.
+
+    Raises:
+        HTTPException(401): Invalid session.
+        HTTPException(403): Account is inactive.
+        HTTPException(404): Profile does not exist.
+        HTTPException(500): Database read failed.
+    """
+    try:
+        profile = db.get(database.Profiles, user_id)
+        if profile is None:
+            raise HTTPException(404, "User profile not found")
+        if not profile.is_active:
+            raise HTTPException(403, "This account is not active")
+        return {"status": profile.is_premium}
+    except SQLAlchemyError as exc:
+        raise HTTPException(500, "Unable to read premium status") from exc
+
+
+@premium_router.put("/premium")
+def update_premium(body: PremiumRequest, user_id: UserId, db: DB):
+    """Enable or disable premium for the current user's active profile.
+
+    Args:
+        body: The premium state the user wants.
+
+    Returns:
+        dict: Confirmation after a change, or 204 if already set.
+
+    Raises:
+        HTTPException(401): Invalid session.
+        HTTPException(403): Account is inactive.
+        HTTPException(404): Profile does not exist.
+        HTTPException(422): The state must be a boolean.
+        HTTPException(500): Database operation failed.
+    """
+    try:
+        profile = db.get(database.Profiles, user_id)
+        if profile is None:
+            raise HTTPException(404, "User profile not found")
+        if not profile.is_active:
+            raise HTTPException(403, "This account is not active")
+
+        # If nothing changed, don't write to the database.
+        if profile.is_premium == body.state:
+            return Response(status_code=204)
+
+        profile.is_premium = body.state
+        db.commit()
+        return {"message": "Premium status updated", "status": profile.is_premium}
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(500, "Unable to update premium status") from exc
 
 
 '''Authenticaation Endpoints'''
