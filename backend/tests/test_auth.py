@@ -14,7 +14,19 @@ from fastapi.testclient import TestClient
 from sqlalchemy.exc import OperationalError
 
 import main
-import routers.profiles as profiles
+from routers import auth_helpers, profiles
+
+
+def allow_password_update(monkeypatch):
+    async def current_user():
+        return auth_helpers.local_user_id("password-update-test-user")
+
+    monkeypatch.setitem(
+        main.app.dependency_overrides,
+        auth_helpers.current_user,
+        current_user,
+    )
+    monkeypatch.setattr(profiles, "require_active_profile", lambda user_id, db: None)
 
 
 @pytest.mark.parametrize(
@@ -187,3 +199,275 @@ def test_login_returns_service_unavailable_when_profile_database_is_down(monkeyp
     assert response.json() == {
         "detail": "Profile database is unavailable; login could not be completed"
     }
+
+
+def test_forgot_password_requests_reset_link(monkeypatch):
+    captured = {}
+
+    async def fake_auth_request(method, route, *, payload=None, cookies=None):
+        captured.update(method=method, route=route, payload=payload)
+        return httpx.Response(200), {"status": True}
+
+    monkeypatch.setattr(profiles, "auth_request", fake_auth_request)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/api/profiles/password/forgot",
+            json={"email": "user@example.com"},
+        )
+
+    assert response.status_code == 200
+    assert response.json() is None
+    assert captured == {
+        "method": "POST",
+        "route": "request-password-reset",
+        "payload": {"email": "user@example.com"},
+    }
+
+
+def test_forgot_password_hides_auth_client_errors(monkeypatch):
+    async def fake_auth_request(method, route, *, payload=None, cookies=None):
+        raise HTTPException(404, "User not found")
+
+    monkeypatch.setattr(profiles, "auth_request", fake_auth_request)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/api/profiles/password/forgot",
+            json={"email": "missing@example.com"},
+        )
+
+    assert response.status_code == 200
+    assert response.json() is None
+
+
+def test_forgot_password_returns_service_error(monkeypatch):
+    async def fake_auth_request(method, route, *, payload=None, cookies=None):
+        raise HTTPException(502, "Authentication service is unavailable")
+
+    monkeypatch.setattr(profiles, "auth_request", fake_auth_request)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/api/profiles/password/forgot",
+            json={"email": "user@example.com"},
+        )
+
+    assert response.status_code == 502
+    assert response.json() == {
+        "detail": "Authentication service is unavailable"
+    }
+
+
+def test_reset_password_calls_auth_service(monkeypatch):
+    captured = {}
+
+    async def fake_auth_request(method, route, *, payload=None, cookies=None):
+        captured.update(method=method, route=route, payload=payload)
+        return httpx.Response(200), {"status": True}
+
+    monkeypatch.setattr(profiles, "auth_request", fake_auth_request)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/api/profiles/password/reset",
+            json={
+                "token": "valid-reset-token",
+                "newPassword": "new-password",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() is None
+    assert captured == {
+        "method": "POST",
+        "route": "reset-password",
+        "payload": {
+            "token": "valid-reset-token",
+            "newPassword": "new-password",
+        },
+    }
+
+
+@pytest.mark.parametrize(
+    "status_code,detail",
+    [
+        (400, "Invalid or expired reset token"),
+        (422, "Password does not meet requirements"),
+        (502, "Authentication service is unavailable"),
+    ],
+)
+def test_reset_password_propagates_auth_errors(
+    monkeypatch, status_code, detail
+):
+    async def fake_auth_request(method, route, *, payload=None, cookies=None):
+        raise HTTPException(status_code, detail)
+
+    monkeypatch.setattr(profiles, "auth_request", fake_auth_request)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/api/profiles/password/reset",
+            json={
+                "token": "reset-token",
+                "newPassword": "new-password",
+            },
+        )
+
+    assert response.status_code == status_code
+    assert response.json() == {"detail": detail}
+
+
+def test_update_password_calls_auth_service_with_session_cookies(monkeypatch):
+    captured = {}
+    auth_session = {}
+    monkeypatch.setattr(
+        profiles, "require_active_profile", lambda profile_id, db: None
+    )
+
+    async def successful_session_lookup(method, route, *, payload=None, cookies=None):
+        auth_session.update(
+            method=method,
+            route=route,
+            cookies=dict(cookies or {}),
+        )
+        return httpx.Response(200), {"user": {"id": "password-update-test-user"}}
+
+    async def fake_auth_request(method, route, *, payload=None, cookies=None):
+        captured.update(
+            method=method,
+            route=route,
+            payload=payload,
+            cookies=dict(cookies or {}),
+        )
+        return httpx.Response(200), {"status": True}
+
+    monkeypatch.setattr(auth_helpers, "auth_request", successful_session_lookup)
+    monkeypatch.setattr(profiles, "auth_request", fake_auth_request)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/api/profiles/password/update",
+            cookies={"better-auth.session_token": "session-value"},
+            json={
+                "current1": "old-password",
+                "current2": "old-password",
+                "new": "new-password",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() is None
+    assert auth_session == {
+        "method": "GET",
+        "route": "get-session",
+        "cookies": {"better-auth.session_token": "session-value"},
+    }
+    assert captured == {
+        "method": "POST",
+        "route": "change-password",
+        "payload": {
+            "currentPassword": "old-password",
+            "newPassword": "new-password",
+        },
+        "cookies": {"better-auth.session_token": "session-value"},
+    }
+
+
+def test_update_password_rejects_mismatched_current_passwords(monkeypatch):
+    allow_password_update(monkeypatch)
+
+    async def unexpected_auth_request(method, route, *, payload=None, cookies=None):
+        pytest.fail("Authentication service should not be called")
+
+    monkeypatch.setattr(profiles, "auth_request", unexpected_auth_request)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/api/profiles/password/update",
+            cookies={"better-auth.session_token": "session-value"},
+            json={
+                "current1": "old-password",
+                "current2": "different-password",
+                "new": "new-password",
+            },
+        )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Current password confirmations do not match"
+
+
+def test_update_password_requires_session():
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/api/profiles/password/update",
+            json={
+                "current1": "old-password",
+                "current2": "old-password",
+                "new": "new-password",
+            },
+        )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Please log in first"
+
+
+def test_update_password_rejects_invalid_session_cookie(monkeypatch):
+    async def invalid_session(method, route, *, payload=None, cookies=None):
+        assert method == "GET" and route == "get-session"
+        assert cookies == {"better-auth.session_token": "invalid-session"}
+        raise HTTPException(401, "Please log in first")
+
+    async def unexpected_password_change(
+        method, route, *, payload=None, cookies=None
+    ):
+        pytest.fail("Password change must not run for an invalid session")
+
+    monkeypatch.setattr(auth_helpers, "auth_request", invalid_session)
+    monkeypatch.setattr(profiles, "auth_request", unexpected_password_change)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/api/profiles/password/update",
+            cookies={"better-auth.session_token": "invalid-session"},
+            json={
+                "current1": "old-password",
+                "current2": "old-password",
+                "new": "new-password",
+            },
+        )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Please log in first"
+
+
+@pytest.mark.parametrize(
+    "status_code,detail",
+    [
+        (401, "Please log in first"),
+        (403, "Current password is incorrect"),
+        (422, "Password does not meet requirements"),
+        (502, "Authentication service is unavailable"),
+    ],
+)
+def test_update_password_propagates_auth_errors(monkeypatch, status_code, detail):
+    allow_password_update(monkeypatch)
+
+    async def fake_auth_request(method, route, *, payload=None, cookies=None):
+        raise HTTPException(status_code, detail)
+
+    monkeypatch.setattr(profiles, "auth_request", fake_auth_request)
+
+    with TestClient(main.app) as client:
+        response = client.post(
+            "/api/profiles/password/update",
+            cookies={"better-auth.session_token": "session-value"},
+            json={
+                "current1": "old-password",
+                "current2": "old-password",
+                "new": "new-password",
+            },
+        )
+
+    assert response.status_code == status_code
+    assert response.json() == {"detail": detail}
