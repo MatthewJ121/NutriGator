@@ -12,11 +12,11 @@ Endpoints:
 """
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from starlette.responses import JSONResponse
 
 import database
-from routers.auth_helpers import DB, auth_request, copy_session_cookie, local_user_id, upstream_cookies, clear_session_cookies, require_active_profile
+from routers.auth_helpers import DB, UserId, auth_request, copy_session_cookie, local_user_id, upstream_cookies, clear_session_cookies, require_active_profile
 
 auth_router = APIRouter(prefix="/api/profiles/auth", tags=["Authentication"])
 password_router = APIRouter(prefix="/api/profiles/password", tags=["Password Management"])
@@ -157,23 +157,72 @@ async def logout(request: Request, response: Response):
     return {"message": "Logged out"}
 
 
+class DeleteAccountRequest(BaseModel):
+    password: str = Field(min_length=1)
+
+
 @auth_router.delete("/delete")
-async def delete_account(password: str, request: Request, response: Response, db: DB):
+async def delete_account(body: DeleteAccountRequest, request: Request,
+                         response: Response, user_id: UserId, db: DB):
+    """Deactivate the signed-in user's profile after checking their password.
+
+    Args:
+        body: Password used to confirm the account belongs to this user.
+        request: Current session cookies sent to Better Auth.
+        response: Clears local session cookies after deactivation.
+        user_id: User ID from the authenticated session.
+        db: Database session for the profile update.
+
+    Returns:
+        dict: Confirmation that the account was deactivated.
+
+    Raises:
+        HTTPException(401): Session is missing or expired.
+        HTTPException(403): Password is incorrect or account is inactive.
+        HTTPException(500): Database update failed.
     """
-    Deactivate a user's profile. 
+    profile = db.get(database.Profiles, user_id)
+    if profile is None:
+        raise HTTPException(401, "Invalid user session")
+    if not profile.is_active:
+        raise HTTPException(403, "This account is not active")
 
-    Parameters:  
-        password (str): Password of the user to authenticate deactivation.
+    cookies = upstream_cookies(request.cookies)
+    if not cookies:
+        raise HTTPException(401, "Please log in first")
 
-    Returns:  
-        dict: Confirmation message.
+    # Check the password with Better Auth. We never store or compare it locally.
+    try:
+        _, verification = await auth_request(
+            "POST", "verify-password",
+            payload={"password": body.password}, cookies=cookies,
+        )
+    except HTTPException as exc:
+        if exc.status_code == 401:
+            raise HTTPException(403, "Incorrect password") from exc
+        raise
 
-    Raises:  
-        HTTPException(401): Invalid session or user.  
-        HTTPException(403): Incorrect password.  
-        HTTPException(500): The database operation failed.
-"""
-    raise HTTPException(501) # implemented in #10
+    if isinstance(verification, dict) and any(
+        verification.get(key) is False for key in ("status", "success", "valid")
+    ):
+        raise HTTPException(403, "Incorrect password")
+
+    # Keep the profile and its meal history for possible account recovery.
+    try:
+        profile.is_active = False
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(500, "Unable to deactivate account") from exc
+
+    # Deactivation still succeeds if Better Auth is temporarily unable to sign out.
+    try:
+        await auth_request("POST", "sign-out", payload={}, cookies=cookies)
+    except HTTPException:
+        pass
+    clear_session_cookies(request, response)
+    return {"message": "Account deactivated"}
+
 
 '''Password Endpoints'''
 
