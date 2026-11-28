@@ -184,6 +184,51 @@ def delete_meal_body(body: MealDeleteRequest, user_id: UserId, db: DB):
     delete_owned_meal(body.meal_id, user_id, db)
 
 
+@router.get("/history")
+def meal_history(user_id: UserId, db: DB):
+    """Get all logged meals for the current user, grouped by UTC date.
+
+    No request body is needed. Each date contains a list of complete meal
+    entries, including their IDs, tracked nutrients, and timestamps.
+
+    Returns:
+        dict: A history dictionary and a short count message, or an empty
+            HTTP 204 response when the user hasn't logged any meals.
+
+    Raises:
+        HTTPException(401): No valid login session.
+        HTTPException(403): The account is inactive.
+        HTTPException(500): The database read failed.
+    """
+    require_active_profile(user_id, db)
+
+    try:
+        # Only read meals belonging to the signed-in user.
+        rows = db.scalars(
+            select(database.Meals)
+            .where(database.Meals.user_id == user_id)
+            .order_by(database.Meals.consumed_at, database.Meals.meal_id)
+        ).all()
+    except SQLAlchemyError as exc:
+        raise HTTPException(500, "Unable to load meal history") from exc
+
+    if not rows:
+        # A 204 response cannot include a JSON body.
+        return Response(status_code=204)
+
+    history = {}
+    for meal in rows:
+        # Meal timestamps are stored in UTC in the existing schema.
+        day = meal.consumed_at.date().isoformat()
+        history.setdefault(day, []).append(meal_data(meal))
+
+    count = len(rows)
+    return {
+        "history": history,
+        "message": f"Retrieved {count} meals across {len(history)} dates",
+    }
+
+
 @router.get("/{day}")
 def meals_for_day(day: date, user_id: UserId, db: DB,
                   timezone_offset: int = Query(default=0, ge=-840, le=840),
@@ -342,22 +387,3 @@ def calculate_progress(start, end, day, user_id, db):
         }
 
     return {"date": day.isoformat(), "timezone": "UTC" if start.hour == 0 else "requested local day", "nutrients": progress}
-
-@router.get("/history")
-def meal_history(user_id: UserId, db: DB):
-    """
-    Retrieve the entire meal history for a user. No request body is accepted.
-
-    Parameters:  
-        None.
-
-    Returns:  
-        dict: List of all meal info keyed by consumption date.  
-        message: Details the length of the returned dictionary and success message.
-
-    Raises:  
-        HTTPException(401): Invalid session or user.      
-        HTTPException(403): Inactive user.  
-        HTTPException(500): The database read failed.
-"""
-    raise HTTPException(501)
